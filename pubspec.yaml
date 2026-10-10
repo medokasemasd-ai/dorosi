@@ -1,0 +1,40 @@
+name: dorosi
+description: "دروسي: تنظيم مواعيد الدروس والطلاب والمدفوعات."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  file_picker: ^13.1.0
+  flutter:
+    sdk: flutter
+  flutter_local_notifications: ^22.3.1
+  flutter_localizations:
+    sdk: flutter
+  flutter_timezone: ^5.1.1
+  home_widget: ^0.10.0
+  intl: ^0.20.3
+  path_provider: ^2.1.6
+  share_plus: ^13.3.1
+  timezone: ^0.11.1
+  url_launcher: ^6.3.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  fonts:
+    - family: Plex
+      fonts:
+        - asset: assets/fonts/IBMPlexSansArabic-Regular.ttf
+        - asset: assets/fonts/IBMPlexSansArabic-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexSansArabic-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/IBMPlexSansArabic-Bold.ttf
+          weight: 700
+  uses-material-design: true
