@@ -31,6 +31,7 @@ class _GroupsPageState extends State<GroupsPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('الحصص والمجموعات')),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: null,
         onPressed: () => openGroupForm(context),
         icon: const Icon(Icons.add),
         label: const Text('حصة جديدة'),
@@ -60,7 +61,8 @@ class _GroupsPageState extends State<GroupsPage> {
               icon: Icon(_showArchived ? Icons.expand_less : Icons.expand_more),
               label: Text('الحصص السابقة (${arNum(archived.length)})'),
             ),
-            if (_showArchived) for (final g in archived) _GroupTile(group: g),
+            if (_showArchived)
+              for (final g in archived) _GroupTile(group: g),
           ],
         ],
       ),
@@ -83,32 +85,41 @@ class _GroupTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Panel(
         onTap: () => openGroupForm(context, group: g),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(child: Text(g.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
-            KindPill(g),
-          ]),
-          const SizedBox(height: 4),
-          Text(scheduleSummary(g), style: const TextStyle(color: AppColors.muted, fontSize: 13)),
-          const SizedBox(height: 6),
-          Row(children: [
-            const Icon(Icons.people_outline, size: 16, color: AppColors.muted),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                members.isEmpty ? 'بدون طلاب' : members.map((s) => s.name).join('، '),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13),
-              ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(g.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                ),
+                KindPill(g),
+              ],
             ),
-            const SizedBox(width: 8),
-            Text(
-              '${fmtMoney(g.currentPrice, currency)} ${g.payType == PayType.perLesson ? '/ حصة' : '/ شهر'}',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            const SizedBox(height: 4),
+            Text(scheduleSummary(g), style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.people_outline, size: 16, color: AppColors.muted),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    members.isEmpty ? 'بدون طلاب' : members.map((s) => s.name).join('، '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${fmtMoney(g.currentPrice, currency)} ${g.payType == PayType.perLesson ? '/ حصة' : '/ شهر'}',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
-          ]),
-        ]),
+          ],
+        ),
       ),
     );
   }

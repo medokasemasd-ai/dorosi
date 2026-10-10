@@ -7,8 +7,64 @@ import 'common.dart';
 import 'group_form.dart';
 import 'theme.dart';
 
-Future<void> openStudentForm(BuildContext context, {Student? student, String? groupId}) =>
-    Navigator.push(context, MaterialPageRoute(builder: (_) => StudentForm(student: student, groupId: groupId)));
+Future<void> openStudentForm(BuildContext context, {Student? student, String? groupId}) => Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => StudentForm(student: student, groupId: groupId),
+  ),
+);
+
+/// Asks before deleting [s] with all their payments. Returns true if deleted.
+Future<bool> deleteStudentAsk(BuildContext context, Student s) async {
+  final ok = await confirm(context, 'حذف ${s.name}؟', 'هيتمسح الطالب وكل مدفوعاته نهائيًا.', ok: 'حذف', danger: true);
+  if (!ok || !context.mounted) return false;
+  await StoreScope.read(context).deleteStudent(s);
+  if (context.mounted) toast(context, 'اتمسح ${s.name}');
+  return true;
+}
+
+/// Edit / move to former students / delete, from a long press on a student anywhere.
+Future<void> showStudentActions(BuildContext context, Student s) async {
+  final v = await showModalBottomSheet<String>(
+    context: context,
+    showDragHandle: true,
+    builder: (c) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(s.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.edit_outlined),
+            title: const Text('تعديل الاسم والبيانات'),
+            onTap: () => Navigator.pop(c, 'edit'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.archive_outlined),
+            title: Text(s.archived ? 'رجّعه للطلاب الحاليين' : 'نقله للطلاب السابقين'),
+            onTap: () => Navigator.pop(c, 'archive'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete_outline, color: AppColors.unpaid),
+            title: const Text('حذف الطالب', style: TextStyle(color: AppColors.unpaid)),
+            onTap: () => Navigator.pop(c, 'delete'),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (!context.mounted) return;
+  switch (v) {
+    case 'edit':
+      await openStudentForm(context, student: s);
+    case 'archive':
+      await StoreScope.read(context).setStudentArchived(s, !s.archived);
+    case 'delete':
+      await deleteStudentAsk(context, s);
+  }
+}
 
 class StudentForm extends StatefulWidget {
   const StudentForm({super.key, this.student, this.groupId});
@@ -81,7 +137,10 @@ class _StudentFormState extends State<StudentForm> {
             TextFormField(
               controller: _phone,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'رقم الموبايل (اختياري)', prefixIcon: Icon(Icons.phone_outlined)),
+              decoration: const InputDecoration(
+                labelText: 'رقم الموبايل (اختياري)',
+                prefixIcon: Icon(Icons.phone_outlined),
+              ),
             ),
             const SizedBox(height: 12),
             _Suggest(controller: _stage, label: 'المرحلة / الصف', options: stages, hint: 'مثال: الثالث الثانوي'),
@@ -127,33 +186,35 @@ class _StudentFormState extends State<StudentForm> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Panel(
                   padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
-                  child: Column(children: [
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      value: _groups.contains(g.id),
-                      onChanged: (v) => setState(() => v == true ? _groups.add(g.id) : _groups.remove(g.id)),
-                      title: Text(g.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        '${scheduleSummary(g)}\n${fmtMoney(g.currentPrice, currency)} ${g.payType == PayType.perLesson ? 'للحصة' : 'في الشهر'}',
+                  child: Column(
+                    children: [
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        value: _groups.contains(g.id),
+                        onChanged: (v) => setState(() => v == true ? _groups.add(g.id) : _groups.remove(g.id)),
+                        title: Text(g.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          '${scheduleSummary(g)}\n${fmtMoney(g.currentPrice, currency)} ${g.payType == PayType.perLesson ? 'للحصة' : 'في الشهر'}',
+                        ),
+                        isThreeLine: true,
                       ),
-                      isThreeLine: true,
-                    ),
-                    if (_groups.contains(g.id))
-                      Padding(
-                        padding: const EdgeInsetsDirectional.only(start: 12, bottom: 8),
-                        child: TextField(
-                          controller: _prices.putIfAbsent(g.id, () => TextEditingController()),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: InputDecoration(
-                            isDense: true,
-                            labelText: 'سعر خاص للطالب ده (اختياري)',
-                            hintText: 'مثلًا خصم الإخوات',
-                            suffixText: currency,
+                      if (_groups.contains(g.id))
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(start: 12, bottom: 8),
+                          child: TextField(
+                            controller: _prices.putIfAbsent(g.id, () => TextEditingController()),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              labelText: 'سعر خاص للطالب ده (اختياري)',
+                              hintText: 'مثلًا خصم الإخوات',
+                              suffixText: currency,
+                            ),
                           ),
                         ),
-                      ),
-                  ]),
+                    ],
+                  ),
                 ),
               ),
             const SizedBox(height: 12),
@@ -200,17 +261,31 @@ class _Suggest extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      TextField(controller: controller, decoration: InputDecoration(labelText: label, hintText: hint)),
-      if (options.isNotEmpty)
-        Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Wrap(spacing: 6, runSpacing: 6, children: [
-            for (final o in options.take(8))
-              ActionChip(label: Text(o), onPressed: () => controller.text = o, visualDensity: VisualDensity.compact),
-          ]),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: controller,
+          decoration: InputDecoration(labelText: label, hintText: hint),
         ),
-    ]);
+        if (options.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final o in options.take(8))
+                  ActionChip(
+                    label: Text(o),
+                    onPressed: () => controller.text = o,
+                    visualDensity: VisualDensity.compact,
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
   }
 }
 

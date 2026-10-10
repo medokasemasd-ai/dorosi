@@ -1,0 +1,58 @@
+import 'package:dorosi/data.dart';
+import 'package:dorosi/main.dart';
+import 'package:dorosi/models.dart';
+import 'package:dorosi/store.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+Future<AppStore> _open(WidgetTester t) async {
+  t.view.physicalSize = const Size(1080, 2400);
+  t.view.devicePixelRatio = 2.5;
+  addTearDown(t.view.reset);
+  final store = AppStore(MemoryStorage());
+  store.data = AppData(
+    students: [Student(id: 's1', name: 'أحمد', joinedAt: DateTime(2026, 1, 1))],
+  );
+  store.loaded = true;
+  await t.pumpWidget(DorosiApp(store: store));
+  await t.pumpAndSettle();
+  return store;
+}
+
+void main() {
+  testWidgets('currency can be changed to riyal and dollar', (t) async {
+    final store = await _open(t);
+    await t.tap(find.text('التذكيرات'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.textContaining('دولار'), 200, scrollable: find.byType(Scrollable).last);
+    await t.tap(find.textContaining('دولار'));
+    await t.pumpAndSettle();
+    expect(store.data.settings.currency, r'$');
+    await t.tap(find.textContaining('ريال'));
+    await t.pumpAndSettle();
+    expect(store.data.settings.currency, 'ر.س');
+  });
+
+  testWidgets('a student can be renamed and deleted from the students list', (t) async {
+    final store = await _open(t);
+    await t.tap(find.text('الطلاب'));
+    await t.pumpAndSettle();
+    await t.longPress(find.text('أحمد'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تعديل الاسم والبيانات'));
+    await t.pumpAndSettle();
+    await t.enterText(find.widgetWithText(TextFormField, 'اسم الطالب'), 'أحمد علي');
+    await t.tap(find.text('حفظ'));
+    await t.pumpAndSettle();
+    expect(store.data.students.single.name, 'أحمد علي');
+
+    await t.tap(find.text('أحمد علي'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('حذف الطالب'), 200, scrollable: find.byType(Scrollable).last);
+    await t.tap(find.text('حذف الطالب'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(FilledButton, 'حذف'));
+    await t.pumpAndSettle();
+    expect(store.data.students, isEmpty);
+  });
+}

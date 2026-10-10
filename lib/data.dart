@@ -11,12 +11,12 @@ class AppData {
     Set<String>? absences,
     Set<String>? cancelled,
     Settings? settings,
-  })  : groups = groups ?? [],
-        students = students ?? [],
-        payments = payments ?? [],
-        absences = absences ?? {},
-        cancelled = cancelled ?? {},
-        settings = settings ?? Settings();
+  }) : groups = groups ?? [],
+       students = students ?? [],
+       payments = payments ?? [],
+       absences = absences ?? {},
+       cancelled = cancelled ?? {},
+       settings = settings ?? Settings();
 
   List<Group> groups;
   List<Student> students;
@@ -32,23 +32,23 @@ class AppData {
   static const int schemaVersion = 1;
 
   Map<String, dynamic> toJson() => {
-        'version': schemaVersion,
-        'groups': groups.map((e) => e.toJson()).toList(),
-        'students': students.map((e) => e.toJson()).toList(),
-        'payments': payments.map((e) => e.toJson()).toList(),
-        'absences': absences.toList(),
-        'cancelled': cancelled.toList(),
-        'settings': settings.toJson(),
-      };
+    'version': schemaVersion,
+    'groups': groups.map((e) => e.toJson()).toList(),
+    'students': students.map((e) => e.toJson()).toList(),
+    'payments': payments.map((e) => e.toJson()).toList(),
+    'absences': absences.toList(),
+    'cancelled': cancelled.toList(),
+    'settings': settings.toJson(),
+  };
 
   factory AppData.fromJson(Map<String, dynamic> j) => AppData(
-        groups: ((j['groups'] ?? []) as List).map((e) => Group.fromJson(e as Map<String, dynamic>)).toList(),
-        students: ((j['students'] ?? []) as List).map((e) => Student.fromJson(e as Map<String, dynamic>)).toList(),
-        payments: ((j['payments'] ?? []) as List).map((e) => Payment.fromJson(e as Map<String, dynamic>)).toList(),
-        absences: ((j['absences'] ?? []) as List).cast<String>().toSet(),
-        cancelled: ((j['cancelled'] ?? []) as List).cast<String>().toSet(),
-        settings: Settings.fromJson((j['settings'] ?? <String, dynamic>{}) as Map<String, dynamic>),
-      );
+    groups: ((j['groups'] ?? []) as List).map((e) => Group.fromJson(e as Map<String, dynamic>)).toList(),
+    students: ((j['students'] ?? []) as List).map((e) => Student.fromJson(e as Map<String, dynamic>)).toList(),
+    payments: ((j['payments'] ?? []) as List).map((e) => Payment.fromJson(e as Map<String, dynamic>)).toList(),
+    absences: ((j['absences'] ?? []) as List).cast<String>().toSet(),
+    cancelled: ((j['cancelled'] ?? []) as List).cast<String>().toSet(),
+    settings: Settings.fromJson((j['settings'] ?? <String, dynamic>{}) as Map<String, dynamic>),
+  );
 
   Student? student(String id) {
     for (final s in students) {
@@ -160,9 +160,7 @@ class AppData {
         }
       }
     }
-    final paid = payments
-        .where((p) => p.studentId == s.id && p.month == month)
-        .fold<double>(0, (a, p) => a + p.amount);
+    final paid = payments.where((p) => p.studentId == s.id && p.month == month).fold<double>(0, (a, p) => a + p.amount);
     return MonthBill(lines, paid);
   }
 }

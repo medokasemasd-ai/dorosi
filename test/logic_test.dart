@@ -8,17 +8,23 @@ import 'package:dorosi/services/reminders.dart';
 import 'package:dorosi/store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Group _group(String id, PayType pay, double price, {List<WeeklySlot>? slots, List<DatedSession>? sessions, List<String>? students}) =>
-    Group(
-      id: id,
-      name: id,
-      payType: pay,
-      prices: [PriceChange(fromMonth: '0000-00', amount: price)],
-      slots: slots,
-      sessions: sessions,
-      studentIds: students,
-      createdAt: DateTime(2026, 1, 1),
-    );
+Group _group(
+  String id,
+  PayType pay,
+  double price, {
+  List<WeeklySlot>? slots,
+  List<DatedSession>? sessions,
+  List<String>? students,
+}) => Group(
+  id: id,
+  name: id,
+  payType: pay,
+  prices: [PriceChange(fromMonth: '0000-00', amount: price)],
+  slots: slots,
+  sessions: sessions,
+  studentIds: students,
+  createdAt: DateTime(2026, 1, 1),
+);
 
 void main() {
   // October 2026: Saturdays are 3, 10, 17, 24, 31.
@@ -29,8 +35,13 @@ void main() {
       final d = AppData(
         students: [s],
         groups: [
-          _group('g', PayType.monthly, 400,
-              slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 90)], students: ['s1'])
+          _group(
+            'g',
+            PayType.monthly,
+            400,
+            slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 90)],
+            students: ['s1'],
+          ),
         ],
       );
       final bill = d.billFor(s, '2026-10', DateTime(2026, 10, 10, 12));
@@ -43,16 +54,29 @@ void main() {
     });
 
     test('future months are not billed', () {
-      final d = AppData(students: [s], groups: [
-        _group('g', PayType.monthly, 400,
-            slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 90)], students: ['s1'])
-      ]);
+      final d = AppData(
+        students: [s],
+        groups: [
+          _group(
+            'g',
+            PayType.monthly,
+            400,
+            slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 90)],
+            students: ['s1'],
+          ),
+        ],
+      );
       expect(d.billFor(s, '2026-11', DateTime(2026, 10, 10)).status, PayStatus.none);
     });
 
     test('per-lesson counts held lessons up to today, minus absences and cancellations', () {
-      final g = _group('g', PayType.perLesson, 100,
-          slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 60)], students: ['s1']);
+      final g = _group(
+        'g',
+        PayType.perLesson,
+        100,
+        slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 60)],
+        students: ['s1'],
+      );
       final d = AppData(students: [s], groups: [g]);
       // Up to Oct 17: lessons on 3, 10, 17.
       expect(d.billFor(s, '2026-10', DateTime(2026, 10, 17, 23)).due, 300);
@@ -67,8 +91,13 @@ void main() {
     });
 
     test('price change applies from its month only', () {
-      final g = _group('g', PayType.monthly, 300,
-          slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 90)], students: ['s1']);
+      final g = _group(
+        'g',
+        PayType.monthly,
+        300,
+        slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 90)],
+        students: ['s1'],
+      );
       g.setPrice(350, now: DateTime(2026, 10, 5));
       final d = AppData(students: [s], groups: [g]);
       expect(d.billFor(s, '2026-09', DateTime(2026, 10, 10)).due, 300);
@@ -76,19 +105,39 @@ void main() {
     });
 
     test('a student special price beats the class price', () {
-      final sib = Student(id: 's2', name: 'مريم', family: 'محمود', joinedAt: DateTime(2026, 1, 1), priceOverrides: {'g': 250});
-      final d = AppData(students: [sib], groups: [
-        _group('g', PayType.monthly, 300,
-            slots: [WeeklySlot(weekday: DateTime.monday, startMin: 17 * 60, durationMin: 90)], students: ['s2'])
-      ]);
+      final sib = Student(
+        id: 's2',
+        name: 'مريم',
+        family: 'محمود',
+        joinedAt: DateTime(2026, 1, 1),
+        priceOverrides: {'g': 250},
+      );
+      final d = AppData(
+        students: [sib],
+        groups: [
+          _group(
+            'g',
+            PayType.monthly,
+            300,
+            slots: [WeeklySlot(weekday: DateTime.monday, startMin: 17 * 60, durationMin: 90)],
+            students: ['s2'],
+          ),
+        ],
+      );
       expect(d.billFor(sib, '2026-10', DateTime(2026, 10, 10)).due, 250);
     });
 
     test('review lessons bill per dated session', () {
-      final g = _group('r', PayType.perLesson, 200, sessions: [
-        DatedSession(date: DateTime(2026, 10, 12), startMin: 20 * 60, durationMin: 120),
-        DatedSession(date: DateTime(2026, 10, 14), startMin: 20 * 60, durationMin: 120),
-      ], students: ['s1']);
+      final g = _group(
+        'r',
+        PayType.perLesson,
+        200,
+        sessions: [
+          DatedSession(date: DateTime(2026, 10, 12), startMin: 20 * 60, durationMin: 120),
+          DatedSession(date: DateTime(2026, 10, 14), startMin: 20 * 60, durationMin: 120),
+        ],
+        students: ['s1'],
+      );
       final d = AppData(students: [s], groups: [g]);
       expect(d.billFor(s, '2026-10', DateTime(2026, 10, 13)).due, 200);
       expect(d.billFor(s, '2026-10', DateTime(2026, 10, 20)).due, 400);
@@ -97,10 +146,22 @@ void main() {
 
   group('schedule', () {
     test('next lesson is the ongoing or the next one', () {
-      final d = AppData(groups: [
-        _group('a', PayType.monthly, 1, slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 90)]),
-        _group('b', PayType.monthly, 1, slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 20 * 60, durationMin: 60)]),
-      ]);
+      final d = AppData(
+        groups: [
+          _group(
+            'a',
+            PayType.monthly,
+            1,
+            slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 90)],
+          ),
+          _group(
+            'b',
+            PayType.monthly,
+            1,
+            slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 20 * 60, durationMin: 60)],
+          ),
+        ],
+      );
       expect(d.nextLesson(DateTime(2026, 10, 10, 12))!.group.id, 'a');
       expect(d.nextLesson(DateTime(2026, 10, 10, 19))!.group.id, 'a'); // still running
       expect(d.nextLesson(DateTime(2026, 10, 10, 19, 45))!.group.id, 'b');
@@ -117,8 +178,12 @@ void main() {
 
   group('reminders', () {
     test('start and end reminders follow the switches', () {
-      final g = _group('a', PayType.monthly, 1,
-          slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 90)]);
+      final g = _group(
+        'a',
+        PayType.monthly,
+        1,
+        slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 90)],
+      );
       final d = AppData(groups: [g]);
       d.settings.remindPayment = false;
       var plan = planReminders(d, DateTime(2026, 10, 10, 12), days: 6);
@@ -162,8 +227,12 @@ void main() {
       final mem = MemoryStorage();
       final store = AppStore(mem);
       await store.load();
-      final g = _group('g', PayType.monthly, 100,
-          slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 600, durationMin: 60)]);
+      final g = _group(
+        'g',
+        PayType.monthly,
+        100,
+        slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 600, durationMin: 60)],
+      );
       await store.saveGroup(g);
       final st = Student(id: 'x', name: 'طالب');
       await store.saveStudent(st, {'g'});

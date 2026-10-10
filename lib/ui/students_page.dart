@@ -79,6 +79,7 @@ class _StudentsPageState extends State<StudentsPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: null,
         onPressed: () => openStudentForm(context),
         icon: const Icon(Icons.person_add_alt_1),
         label: const Text('طالب جديد'),
@@ -87,25 +88,36 @@ class _StudentsPageState extends State<StudentsPage> {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
         children: [
           Panel(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Expanded(child: _Stat(label: 'دفعوا', value: arNum(paidCount), color: AppColors.paid)),
-                Expanded(child: _Stat(label: 'لسه', value: arNum(unpaidCount), color: AppColors.unpaid)),
-              ]),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  value: totalDue <= 0 ? 0 : (totalPaid / totalDue).clamp(0, 1).toDouble(),
-                  minHeight: 10,
-                  backgroundColor: AppColors.unpaidSoft,
-                  color: const Color(0xFF16A34A),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _Stat(label: 'دفعوا', value: arNum(paidCount), color: AppColors.paid),
+                    ),
+                    Expanded(
+                      child: _Stat(label: 'لسه', value: arNum(unpaidCount), color: AppColors.unpaid),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text('المحصّل ${fmtMoney(totalPaid, currency)} من ${fmtMoney(totalDue, currency)}',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 13)),
-            ]),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: totalDue <= 0 ? 0 : (totalPaid / totalDue).clamp(0, 1).toDouble(),
+                    minHeight: 10,
+                    backgroundColor: AppColors.unpaidSoft,
+                    color: const Color(0xFF16A34A),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'المحصّل ${fmtMoney(totalPaid, currency)} من ${fmtMoney(totalDue, currency)}',
+                  style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -115,25 +127,27 @@ class _StudentsPageState extends State<StudentsPage> {
           const SizedBox(height: 10),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              for (final f in _Filter.values)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 8),
-                  child: ChoiceChip(
-                    label: Text(_filterLabel(f)),
-                    selected: _filter == f,
-                    showCheckmark: false,
-                    selectedColor: AppColors.ink,
-                    labelStyle: TextStyle(color: _filter == f ? Colors.white : AppColors.ink, fontFamily: 'Plex'),
-                    onSelected: (_) => setState(() => _filter = f),
+            child: Row(
+              children: [
+                for (final f in _Filter.values)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 8),
+                    child: ChoiceChip(
+                      label: Text(_filterLabel(f)),
+                      selected: _filter == f,
+                      showCheckmark: false,
+                      selectedColor: AppColors.ink,
+                      labelStyle: TextStyle(color: _filter == f ? Colors.white : AppColors.ink, fontFamily: 'Plex'),
+                      onSelected: (_) => setState(() => _filter = f),
+                    ),
                   ),
+                FilterChip(
+                  label: const Text('حسب العائلة'),
+                  selected: _byFamily,
+                  onSelected: (v) => setState(() => _byFamily = v),
                 ),
-              FilterChip(
-                label: const Text('حسب العائلة'),
-                selected: _byFamily,
-                onSelected: (v) => setState(() => _byFamily = v),
-              ),
-            ]),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           if (d.students.isEmpty)
@@ -164,22 +178,32 @@ class _StudentsPageState extends State<StudentsPage> {
       families.putIfAbsent(f.isEmpty ? '' : f, () => []).add(r);
     }
     final keys = families.keys.toList()
-      ..sort((a, b) => a.isEmpty ? 1 : b.isEmpty ? -1 : a.compareTo(b));
+      ..sort(
+        (a, b) => a.isEmpty
+            ? 1
+            : b.isEmpty
+            ? -1
+            : a.compareTo(b),
+      );
     return [
       for (final k in keys) ...[
         Padding(
           padding: const EdgeInsets.only(top: 8, bottom: 6),
-          child: Row(children: [
-            Expanded(
-              child: Text(k.isEmpty ? 'بدون عائلة' : 'عائلة $k',
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-            ),
-            if (k.isNotEmpty)
-              Text(
-                'الباقي ${fmtMoney(families[k]!.fold<double>(0, (a, r) => a + r.bill.remaining), currency)}',
-                style: const TextStyle(color: AppColors.muted, fontSize: 13),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  k.isEmpty ? 'بدون عائلة' : 'عائلة $k',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                ),
               ),
-          ]),
+              if (k.isNotEmpty)
+                Text(
+                  'الباقي ${fmtMoney(families[k]!.fold<double>(0, (a, r) => a + r.bill.remaining), currency)}',
+                  style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+            ],
+          ),
         ),
         for (final r in families[k]!) _tile(r, currency, month),
       ],
@@ -195,38 +219,46 @@ class _StudentsPageState extends State<StudentsPage> {
       child: Panel(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StudentPage(studentId: s.id))),
-        child: Row(children: [
-          Avatar(s.name),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(s.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-              Text(
-                groups.isEmpty ? 'مش مسجل في حصة' : groups,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+        onLongPress: () => showStudentActions(context, s),
+        child: Row(
+          children: [
+            Avatar(s.name),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(s.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  Text(
+                    groups.isEmpty ? 'مش مسجل في حصة' : groups,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  ),
+                  if (status == PayStatus.partial || status == PayStatus.unpaid)
+                    Text(
+                      'الباقي ${fmtMoney(r.bill.remaining, currency)}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.unpaid),
+                    ),
+                ],
               ),
-              if (status == PayStatus.partial || status == PayStatus.unpaid)
-                Text('الباقي ${fmtMoney(r.bill.remaining, currency)}',
-                    style: const TextStyle(fontSize: 12, color: AppColors.unpaid)),
-            ]),
-          ),
-          const SizedBox(width: 8),
-          if (status == PayStatus.unpaid || status == PayStatus.partial)
-            TextButton(
-              onPressed: () => showPaymentSheet(context, s, month),
-              style: TextButton.styleFrom(
-                backgroundColor: AppColors.unpaidSoft,
-                foregroundColor: AppColors.unpaid,
-                minimumSize: const Size(44, 38),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text('تسجيل الدفع', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-            )
-          else
-            StatusPill(status),
-        ]),
+            ),
+            const SizedBox(width: 8),
+            if (status == PayStatus.unpaid || status == PayStatus.partial)
+              TextButton(
+                onPressed: () => showPaymentSheet(context, s, month),
+                style: TextButton.styleFrom(
+                  backgroundColor: AppColors.unpaidSoft,
+                  foregroundColor: AppColors.unpaid,
+                  minimumSize: const Size(44, 38),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('تسجيل الدفع', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+              )
+            else
+              StatusPill(status),
+          ],
+        ),
       ),
     );
   }
@@ -264,9 +296,15 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 13)),
-      Text(value, style: TextStyle(color: color, fontSize: 26, fontWeight: FontWeight.w700)),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+        Text(
+          value,
+          style: TextStyle(color: color, fontSize: 26, fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
   }
 }

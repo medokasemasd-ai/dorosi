@@ -10,16 +10,16 @@ const _provider = 'com.aboelkasem.dorosi.NextLessonWidget';
 
 /// The lessons the home-screen widget can show, in the form the Android side reads.
 List<Map<String, dynamic>> widgetLessons(AppData d, DateTime now, {int days = 14}) => [
-      for (final l in d.upcoming(now, days: days))
-        {
-          'start': l.start.millisecondsSinceEpoch,
-          'end': l.end.millisecondsSinceEpoch,
-          'title': l.group.name,
-          'time': '${fmtTime(l.startMin)} – ${fmtTime(l.startMin + l.durationMin)}',
-          'dayName': weekdayName(l.date.weekday),
-          'who': _who(d, l),
-        }
-    ];
+  for (final l in d.upcoming(now, days: days))
+    {
+      'start': l.start.millisecondsSinceEpoch,
+      'end': l.end.millisecondsSinceEpoch,
+      'title': l.group.name,
+      'time': '${fmtTime(l.startMin)} – ${fmtTime(l.startMin + l.durationMin)}',
+      'dayName': weekdayName(l.date.weekday),
+      'who': _who(d, l),
+    },
+];
 
 String _who(AppData d, Lesson l) {
   final s = d.studentsOf(l.group);
@@ -43,8 +43,7 @@ Future<void> syncHomeWidget(AppData d) async {
         DateTime.fromMillisecondsSinceEpoch(l['end'] as int),
       ],
       DateTime(now.year, now.month, now.day + 1),
-    }.where((t) => t.isAfter(now)).toList()
-      ..sort();
+    }.where((t) => t.isAfter(now)).toList()..sort();
     await HomeWidget.scheduleWidgetUpdates(times.take(60).toList(), qualifiedAndroidName: _provider);
   } catch (e) {
     debugPrint('widget sync failed: $e');

@@ -32,11 +32,8 @@ class DatedSession {
 
   Map<String, dynamic> toJson() => {'date': dateKey(date), 's': startMin, 'd': durationMin};
 
-  factory DatedSession.fromJson(Map<String, dynamic> j) => DatedSession(
-        date: parseDateKey(j['date'] as String),
-        startMin: j['s'] as int,
-        durationMin: j['d'] as int,
-      );
+  factory DatedSession.fromJson(Map<String, dynamic> j) =>
+      DatedSession(date: parseDateKey(j['date'] as String), startMin: j['s'] as int, durationMin: j['d'] as int);
 
   DatedSession copy() => DatedSession(date: date, startMin: startMin, durationMin: durationMin);
 }
@@ -74,11 +71,11 @@ class Group {
     this.archivedAt,
     this.notes = '',
     DateTime? createdAt,
-  })  : prices = prices ?? [],
-        slots = slots ?? [],
-        sessions = sessions ?? [],
-        studentIds = studentIds ?? [],
-        createdAt = createdAt ?? DateTime.now();
+  }) : prices = prices ?? [],
+       slots = slots ?? [],
+       sessions = sessions ?? [],
+       studentIds = studentIds ?? [],
+       createdAt = createdAt ?? DateTime.now();
 
   String id;
   String name;
@@ -121,41 +118,40 @@ class Group {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'stage': stage,
-        'kind': kind.name,
-        'payType': payType.name,
-        'prices': prices.map((e) => e.toJson()).toList(),
-        'slots': slots.map((e) => e.toJson()).toList(),
-        'sessions': sessions.map((e) => e.toJson()).toList(),
-        'students': studentIds,
-        'remindStart': remindStart,
-        'remindEnd': remindEnd,
-        'archived': archived,
-        'archivedAt': archivedAt == null ? null : dateKey(archivedAt!),
-        'notes': notes,
-        'createdAt': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'stage': stage,
+    'kind': kind.name,
+    'payType': payType.name,
+    'prices': prices.map((e) => e.toJson()).toList(),
+    'slots': slots.map((e) => e.toJson()).toList(),
+    'sessions': sessions.map((e) => e.toJson()).toList(),
+    'students': studentIds,
+    'remindStart': remindStart,
+    'remindEnd': remindEnd,
+    'archived': archived,
+    'archivedAt': archivedAt == null ? null : dateKey(archivedAt!),
+    'notes': notes,
+    'createdAt': createdAt.toIso8601String(),
+  };
 
   factory Group.fromJson(Map<String, dynamic> j) => Group(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        stage: (j['stage'] ?? '') as String,
-        kind: GroupKind.values.byName((j['kind'] ?? 'group') as String),
-        payType: PayType.values.byName((j['payType'] ?? 'monthly') as String),
-        prices: ((j['prices'] ?? []) as List).map((e) => PriceChange.fromJson(e as Map<String, dynamic>)).toList(),
-        slots: ((j['slots'] ?? []) as List).map((e) => WeeklySlot.fromJson(e as Map<String, dynamic>)).toList(),
-        sessions:
-            ((j['sessions'] ?? []) as List).map((e) => DatedSession.fromJson(e as Map<String, dynamic>)).toList(),
-        studentIds: ((j['students'] ?? []) as List).cast<String>(),
-        remindStart: (j['remindStart'] ?? true) as bool,
-        remindEnd: (j['remindEnd'] ?? true) as bool,
-        archived: (j['archived'] ?? false) as bool,
-        archivedAt: j['archivedAt'] == null ? null : parseDateKey(j['archivedAt'] as String),
-        notes: (j['notes'] ?? '') as String,
-        createdAt: DateTime.tryParse((j['createdAt'] ?? '') as String) ?? DateTime(2000),
-      );
+    id: j['id'] as String,
+    name: j['name'] as String,
+    stage: (j['stage'] ?? '') as String,
+    kind: GroupKind.values.byName((j['kind'] ?? 'group') as String),
+    payType: PayType.values.byName((j['payType'] ?? 'monthly') as String),
+    prices: ((j['prices'] ?? []) as List).map((e) => PriceChange.fromJson(e as Map<String, dynamic>)).toList(),
+    slots: ((j['slots'] ?? []) as List).map((e) => WeeklySlot.fromJson(e as Map<String, dynamic>)).toList(),
+    sessions: ((j['sessions'] ?? []) as List).map((e) => DatedSession.fromJson(e as Map<String, dynamic>)).toList(),
+    studentIds: ((j['students'] ?? []) as List).cast<String>(),
+    remindStart: (j['remindStart'] ?? true) as bool,
+    remindEnd: (j['remindEnd'] ?? true) as bool,
+    archived: (j['archived'] ?? false) as bool,
+    archivedAt: j['archivedAt'] == null ? null : parseDateKey(j['archivedAt'] as String),
+    notes: (j['notes'] ?? '') as String,
+    createdAt: DateTime.tryParse((j['createdAt'] ?? '') as String) ?? DateTime(2000),
+  );
 }
 
 class Student {
@@ -169,8 +165,8 @@ class Student {
     Map<String, double>? priceOverrides,
     this.archived = false,
     DateTime? joinedAt,
-  })  : priceOverrides = priceOverrides ?? {},
-        joinedAt = joinedAt ?? dateOnly(DateTime.now());
+  }) : priceOverrides = priceOverrides ?? {},
+       joinedAt = joinedAt ?? dateOnly(DateTime.now());
 
   String id;
   String name;
@@ -187,34 +183,39 @@ class Student {
   DateTime joinedAt;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'phone': phone,
-        'stage': stage,
-        'family': family,
-        'notes': notes,
-        'priceOverrides': priceOverrides,
-        'archived': archived,
-        'joinedAt': dateKey(joinedAt),
-      };
+    'id': id,
+    'name': name,
+    'phone': phone,
+    'stage': stage,
+    'family': family,
+    'notes': notes,
+    'priceOverrides': priceOverrides,
+    'archived': archived,
+    'joinedAt': dateKey(joinedAt),
+  };
 
   factory Student.fromJson(Map<String, dynamic> j) => Student(
-        id: j['id'] as String,
-        name: j['name'] as String,
-        phone: (j['phone'] ?? '') as String,
-        stage: (j['stage'] ?? '') as String,
-        family: (j['family'] ?? '') as String,
-        notes: (j['notes'] ?? '') as String,
-        priceOverrides: ((j['priceOverrides'] ?? {}) as Map)
-            .map((k, v) => MapEntry(k as String, (v as num).toDouble())),
-        archived: (j['archived'] ?? false) as bool,
-        joinedAt: j['joinedAt'] == null ? DateTime(2000) : parseDateKey(j['joinedAt'] as String),
-      );
+    id: j['id'] as String,
+    name: j['name'] as String,
+    phone: (j['phone'] ?? '') as String,
+    stage: (j['stage'] ?? '') as String,
+    family: (j['family'] ?? '') as String,
+    notes: (j['notes'] ?? '') as String,
+    priceOverrides: ((j['priceOverrides'] ?? {}) as Map).map((k, v) => MapEntry(k as String, (v as num).toDouble())),
+    archived: (j['archived'] ?? false) as bool,
+    joinedAt: j['joinedAt'] == null ? DateTime(2000) : parseDateKey(j['joinedAt'] as String),
+  );
 }
 
 class Payment {
-  Payment({required this.id, required this.studentId, required this.month, required this.amount, DateTime? paidAt, this.note = ''})
-      : paidAt = paidAt ?? DateTime.now();
+  Payment({
+    required this.id,
+    required this.studentId,
+    required this.month,
+    required this.amount,
+    DateTime? paidAt,
+    this.note = '',
+  }) : paidAt = paidAt ?? DateTime.now();
 
   String id;
   String studentId;
@@ -224,22 +225,22 @@ class Payment {
   String note;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'student': studentId,
-        'month': month,
-        'amount': amount,
-        'paidAt': paidAt.toIso8601String(),
-        'note': note,
-      };
+    'id': id,
+    'student': studentId,
+    'month': month,
+    'amount': amount,
+    'paidAt': paidAt.toIso8601String(),
+    'note': note,
+  };
 
   factory Payment.fromJson(Map<String, dynamic> j) => Payment(
-        id: j['id'] as String,
-        studentId: j['student'] as String,
-        month: j['month'] as String,
-        amount: (j['amount'] as num).toDouble(),
-        paidAt: DateTime.tryParse((j['paidAt'] ?? '') as String),
-        note: (j['note'] ?? '') as String,
-      );
+    id: j['id'] as String,
+    studentId: j['student'] as String,
+    month: j['month'] as String,
+    amount: (j['amount'] as num).toDouble(),
+    paidAt: DateTime.tryParse((j['paidAt'] ?? '') as String),
+    note: (j['note'] ?? '') as String,
+  );
 }
 
 class Settings {
@@ -266,24 +267,24 @@ class Settings {
   String currency;
 
   Map<String, dynamic> toJson() => {
-        'remindStart': remindStart,
-        'remindEnd': remindEnd,
-        'remindPayment': remindPayment,
-        'startLeadMin': startLeadMin,
-        'paymentDay': paymentDay,
-        'paymentHour': paymentHour,
-        'currency': currency,
-      };
+    'remindStart': remindStart,
+    'remindEnd': remindEnd,
+    'remindPayment': remindPayment,
+    'startLeadMin': startLeadMin,
+    'paymentDay': paymentDay,
+    'paymentHour': paymentHour,
+    'currency': currency,
+  };
 
   factory Settings.fromJson(Map<String, dynamic> j) => Settings(
-        remindStart: (j['remindStart'] ?? true) as bool,
-        remindEnd: (j['remindEnd'] ?? true) as bool,
-        remindPayment: (j['remindPayment'] ?? true) as bool,
-        startLeadMin: (j['startLeadMin'] ?? 10) as int,
-        paymentDay: (j['paymentDay'] ?? 0) as int,
-        paymentHour: (j['paymentHour'] ?? 20) as int,
-        currency: (j['currency'] ?? 'ج.م') as String,
-      );
+    remindStart: (j['remindStart'] ?? true) as bool,
+    remindEnd: (j['remindEnd'] ?? true) as bool,
+    remindPayment: (j['remindPayment'] ?? true) as bool,
+    startLeadMin: (j['startLeadMin'] ?? 10) as int,
+    paymentDay: (j['paymentDay'] ?? 0) as int,
+    paymentHour: (j['paymentHour'] ?? 20) as int,
+    currency: (j['currency'] ?? 'ج.م') as String,
+  );
 }
 
 // ---- date helpers ----

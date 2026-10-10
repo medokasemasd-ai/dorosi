@@ -22,41 +22,87 @@ String demoJson() {
   final nour = st('نور الدين صالح', 'الأول الثانوي');
   final karim = st('كريم سامي', 'الثالث الثانوي');
 
-  Group g(String name, String stage, GroupKind kind, PayType pay, double price, List<WeeklySlot> slots,
-          List<Student> students, {List<DatedSession>? sessions}) =>
-      Group(
-        id: id(),
-        name: name,
-        stage: stage,
-        kind: kind,
-        payType: pay,
-        prices: [PriceChange(fromMonth: '0000-00', amount: price)],
-        slots: slots,
-        sessions: sessions,
-        studentIds: students.map((s) => s.id).toList(),
-        createdAt: month,
-      );
+  Group g(
+    String name,
+    String stage,
+    GroupKind kind,
+    PayType pay,
+    double price,
+    List<WeeklySlot> slots,
+    List<Student> students, {
+    List<DatedSession>? sessions,
+  }) => Group(
+    id: id(),
+    name: name,
+    stage: stage,
+    kind: kind,
+    payType: pay,
+    prices: [PriceChange(fromMonth: '0000-00', amount: price)],
+    slots: slots,
+    sessions: sessions,
+    studentIds: students.map((s) => s.id).toList(),
+    createdAt: month,
+  );
 
   final groups = [
-    g('الثالث الثانوي · مجموعة أ', 'الثالث الثانوي', GroupKind.group, PayType.monthly, 400, [
-      WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 90),
-      WeeklySlot(weekday: DateTime.tuesday, startMin: 18 * 60, durationMin: 90),
-    ], [ahmed, youssef, sara]),
-    g('الأول الثانوي · مجموعة ج', 'الأول الثانوي', GroupKind.group, PayType.monthly, 300, [
-      WeeklySlot(weekday: DateTime.saturday, startMin: 19 * 60 + 45, durationMin: 90),
-      WeeklySlot(weekday: DateTime.wednesday, startMin: 17 * 60, durationMin: 90),
-    ], [mariam, nour]),
-    g('عمر خالد (فردي)', 'الثاني الثانوي', GroupKind.individual, PayType.perLesson, 150, [
-      WeeklySlot(weekday: DateTime.sunday, startMin: 17 * 60, durationMin: 60),
-      WeeklySlot(weekday: DateTime.thursday, startMin: 17 * 60, durationMin: 60),
-    ], [omar]),
-    g('الثاني الثانوي · مجموعة ب', 'الثاني الثانوي', GroupKind.group, PayType.monthly, 350, [
-      WeeklySlot(weekday: DateTime.monday, startMin: 18 * 60, durationMin: 90),
-    ], [salma, omar]),
-    g('مراجعة نهائية · كريم', 'الثالث الثانوي', GroupKind.review, PayType.perLesson, 200, [], [karim], sessions: [
-      DatedSession(date: DateTime(now.year, now.month, now.day + 2), startMin: 20 * 60, durationMin: 120),
-      DatedSession(date: DateTime(now.year, now.month, now.day + 4), startMin: 20 * 60, durationMin: 120),
-    ]),
+    g(
+      'الثالث الثانوي · مجموعة أ',
+      'الثالث الثانوي',
+      GroupKind.group,
+      PayType.monthly,
+      400,
+      [
+        WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 90),
+        WeeklySlot(weekday: DateTime.tuesday, startMin: 18 * 60, durationMin: 90),
+      ],
+      [ahmed, youssef, sara],
+    ),
+    g(
+      'الأول الثانوي · مجموعة ج',
+      'الأول الثانوي',
+      GroupKind.group,
+      PayType.monthly,
+      300,
+      [
+        WeeklySlot(weekday: DateTime.saturday, startMin: 19 * 60 + 45, durationMin: 90),
+        WeeklySlot(weekday: DateTime.wednesday, startMin: 17 * 60, durationMin: 90),
+      ],
+      [mariam, nour],
+    ),
+    g(
+      'عمر خالد (فردي)',
+      'الثاني الثانوي',
+      GroupKind.individual,
+      PayType.perLesson,
+      150,
+      [
+        WeeklySlot(weekday: DateTime.sunday, startMin: 17 * 60, durationMin: 60),
+        WeeklySlot(weekday: DateTime.thursday, startMin: 17 * 60, durationMin: 60),
+      ],
+      [omar],
+    ),
+    g(
+      'الثاني الثانوي · مجموعة ب',
+      'الثاني الثانوي',
+      GroupKind.group,
+      PayType.monthly,
+      350,
+      [WeeklySlot(weekday: DateTime.monday, startMin: 18 * 60, durationMin: 90)],
+      [salma, omar],
+    ),
+    g(
+      'مراجعة نهائية · كريم',
+      'الثالث الثانوي',
+      GroupKind.review,
+      PayType.perLesson,
+      200,
+      [],
+      [karim],
+      sessions: [
+        DatedSession(date: DateTime(now.year, now.month, now.day + 2), startMin: 20 * 60, durationMin: 120),
+        DatedSession(date: DateTime(now.year, now.month, now.day + 4), startMin: 20 * 60, durationMin: 120),
+      ],
+    ),
   ];
   // Sibling discount for Mariam.
   mariam.priceOverrides[groups[1].id] = 250;

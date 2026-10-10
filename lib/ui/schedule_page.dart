@@ -50,6 +50,7 @@ class _SchedulePageState extends State<SchedulePage> {
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: null,
         onPressed: () => openGroupForm(context),
         icon: const Icon(Icons.add),
         label: const Text('حصة جديدة'),
@@ -58,8 +59,10 @@ class _SchedulePageState extends State<SchedulePage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
           children: [
-            Text(now.hour < 12 ? 'صباح الخير' : 'مساء الخير',
-                style: const TextStyle(color: AppColors.muted, fontSize: 14)),
+            Text(
+              now.hour < 12 ? 'صباح الخير' : 'مساء الخير',
+              style: const TextStyle(color: AppColors.muted, fontSize: 14),
+            ),
             Text(fmtDate(now), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             if (d.groups.isEmpty)
@@ -77,42 +80,56 @@ class _SchedulePageState extends State<SchedulePage> {
             else
               _NextLessonCard(lesson: next, now: now),
             const SizedBox(height: 20),
-            Row(children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(isThisWeek ? 'أيام الأسبوع' : 'أسبوع ${fmtShortDate(_week)}',
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                  Text(
-                    '${fmtShortDate(days.first)} – ${fmtShortDate(days.last)} · ${lessonsCount(totalLessons)}',
-                    style: const TextStyle(color: AppColors.muted, fontSize: 13),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isThisWeek ? 'أيام الأسبوع' : 'أسبوع ${fmtShortDate(_week)}',
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        '${fmtShortDate(days.first)} – ${fmtShortDate(days.last)} · ${lessonsCount(totalLessons)}',
+                        style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                      ),
+                    ],
                   ),
-                ]),
-              ),
-              IconButton(
-                tooltip: 'الأسبوع السابق',
-                onPressed: () => setState(() => _week = DateTime(_week.year, _week.month, _week.day - 7)),
-                icon: const Icon(Icons.chevron_left),
-              ),
-              if (!isThisWeek)
-                TextButton(onPressed: () => setState(() => _week = weekStart(now)), child: const Text('الحالي')),
-              IconButton(
-                tooltip: 'الأسبوع التالي',
-                onPressed: () => setState(() => _week = DateTime(_week.year, _week.month, _week.day + 7)),
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ]),
+                ),
+                IconButton(
+                  tooltip: 'الأسبوع السابق',
+                  onPressed: () => setState(() => _week = DateTime(_week.year, _week.month, _week.day - 7)),
+                  icon: const Icon(Icons.chevron_left),
+                ),
+                if (!isThisWeek)
+                  TextButton(onPressed: () => setState(() => _week = weekStart(now)), child: const Text('الحالي')),
+                IconButton(
+                  tooltip: 'الأسبوع التالي',
+                  onPressed: () => setState(() => _week = DateTime(_week.year, _week.month, _week.day + 7)),
+                  icon: const Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             for (var i = 0; i < 7; i += 2)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: IntrinsicHeight(
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    Expanded(child: _DayCard(day: days[i], lessons: perDay[days[i]]!, data: d, now: now)),
-                    if (i + 1 < 7) ...[
-                      const SizedBox(width: 10),
-                      Expanded(child: _DayCard(day: days[i + 1], lessons: perDay[days[i + 1]]!, data: d, now: now)),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _DayCard(day: days[i], lessons: perDay[days[i]]!, data: d, now: now),
+                      ),
+                      if (i + 1 < 7) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _DayCard(day: days[i + 1], lessons: perDay[days[i + 1]]!, data: d, now: now),
+                        ),
+                      ],
                     ],
-                  ]),
+                  ),
                 ),
               ),
           ],
@@ -137,7 +154,9 @@ class _NextLessonCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(22),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: l == null ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => DayPage(day: l.date))),
+        onTap: l == null
+            ? null
+            : () => Navigator.push(context, MaterialPageRoute(builder: (_) => DayPage(day: l.date))),
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: l == null
@@ -152,38 +171,56 @@ class _NextLessonCard extends StatelessWidget {
     final ongoing = !l.start.isAfter(now);
     final members = d.studentsOf(l.group);
     final reminderOn = d.settings.remindStart && l.group.remindStart;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        Expanded(
-          child: Text(ongoing ? 'الحصة الحالية' : 'الحصة القادمة',
-              style: const TextStyle(color: AppColors.navyText, fontSize: 13)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                ongoing ? 'الحصة الحالية' : 'الحصة القادمة',
+                style: const TextStyle(color: AppColors.navyText, fontSize: 13),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(color: const Color(0xFF2A3A5E), borderRadius: BorderRadius.circular(999)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    reminderOn ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    reminderOn ? 'التذكير مفعّل' : 'التذكير مقفول',
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(color: const Color(0xFF2A3A5E), borderRadius: BorderRadius.circular(999)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(reminderOn ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
-                size: 14, color: Colors.white),
-            const SizedBox(width: 6),
-            Text(reminderOn ? 'التذكير مفعّل' : 'التذكير مقفول',
-                style: const TextStyle(color: Colors.white, fontSize: 12)),
-          ]),
+        const SizedBox(height: 10),
+        Text(
+          l.group.name,
+          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
         ),
-      ]),
-      const SizedBox(height: 10),
-      Text(l.group.name, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 4),
-      Text(
-        '${dayLabel(l.date, now)} · ${fmtTime(l.startMin)} – ${fmtTime(l.startMin + l.durationMin)} · '
-        '${members.length == 1 ? members.first.name : studentsCount(members.length)}',
-        style: const TextStyle(color: AppColors.navyText, fontSize: 14),
-      ),
-      const SizedBox(height: 12),
-      Text(
-        ongoing ? 'تنتهي ${fmtCountdown(l.end.difference(now))}' : 'تبدأ ${fmtCountdown(l.start.difference(now))}',
-        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
-      ),
-    ]);
+        const SizedBox(height: 4),
+        Text(
+          '${dayLabel(l.date, now)} · ${fmtTime(l.startMin)} – ${fmtTime(l.startMin + l.durationMin)} · '
+          '${members.length == 1 ? members.first.name : studentsCount(members.length)}',
+          style: const TextStyle(color: AppColors.navyText, fontSize: 14),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          ongoing ? 'تنتهي ${fmtCountdown(l.end.difference(now))}' : 'تبدأ ${fmtCountdown(l.start.difference(now))}',
+          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
   }
 }
 
@@ -199,7 +236,9 @@ class _DayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isToday = dateOnly(day) == dateOnly(now);
     final students = {for (final l in lessons) ...data.studentsOf(l.group).map((s) => s.id)}.length;
-    final hasReview = lessons.any((l) => l.group.sessions.isNotEmpty && l.group.slots.every((s) => s.weekday != day.weekday));
+    final hasReview = lessons.any(
+      (l) => l.group.sessions.isNotEmpty && l.group.slots.every((s) => s.weekday != day.weekday),
+    );
     final fg = isToday ? Colors.white : AppColors.ink;
     final sub = isToday ? const Color(0xFFDCE4FF) : AppColors.muted;
     return Material(
@@ -213,35 +252,47 @@ class _DayCard extends StatelessWidget {
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DayPage(day: day))),
         child: Padding(
           padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(
-                child: Text(weekdayName(day.weekday),
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: fg)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      weekdayName(day.weekday),
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: fg),
+                    ),
+                  ),
+                  if (isToday)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)),
+                      child: const Text(
+                        'اليوم',
+                        style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w700),
+                      ),
+                    )
+                  else
+                    Text(arNum(day.day), style: TextStyle(color: sub, fontSize: 13)),
+                ],
               ),
-              if (isToday)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)),
-                  child: const Text('اليوم',
-                      style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w700)),
-                )
-              else
-                Text(arNum(day.day), style: TextStyle(color: sub, fontSize: 13)),
-            ]),
-            const SizedBox(height: 6),
-            if (lessons.isEmpty)
-              Text('لا حصص', style: TextStyle(color: sub, fontSize: 13))
-            else ...[
-              Text('${lessonsCount(lessons.length)} · ${studentsCount(students)}', style: TextStyle(color: sub, fontSize: 13)),
-              const SizedBox(height: 2),
-              Text('من ${fmtTime(lessons.first.startMin)}', style: TextStyle(color: sub, fontSize: 12)),
-              if (hasReview) ...[
-                const SizedBox(height: 6),
-                const Pill('مراجعة', fg: AppColors.review, bg: AppColors.reviewSoft),
+              const SizedBox(height: 6),
+              if (lessons.isEmpty)
+                Text('لا حصص', style: TextStyle(color: sub, fontSize: 13))
+              else ...[
+                Text(
+                  '${lessonsCount(lessons.length)} · ${studentsCount(students)}',
+                  style: TextStyle(color: sub, fontSize: 13),
+                ),
+                const SizedBox(height: 2),
+                Text('من ${fmtTime(lessons.first.startMin)}', style: TextStyle(color: sub, fontSize: 12)),
+                if (hasReview) ...[
+                  const SizedBox(height: 6),
+                  const Pill('مراجعة', fg: AppColors.review, bg: AppColors.reviewSoft),
+                ],
               ],
             ],
-          ]),
+          ),
         ),
       ),
     );

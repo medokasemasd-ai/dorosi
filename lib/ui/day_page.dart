@@ -6,6 +6,7 @@ import '../models.dart';
 import '../store.dart';
 import 'common.dart';
 import 'group_form.dart';
+import 'student_form.dart';
 import 'student_page.dart';
 import 'theme.dart';
 
@@ -23,13 +24,19 @@ class DayPage extends StatelessWidget {
     final students = {for (final l in active) ...d.studentsOf(l.group).map((s) => s.id)}.length;
     return Scaffold(
       appBar: AppBar(
-        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(fmtDate(day)),
-          Text('${lessonsCount(active.length)} · ${studentsCount(students)}',
-              style: const TextStyle(fontSize: 13, color: AppColors.muted, fontWeight: FontWeight.w400)),
-        ]),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(fmtDate(day)),
+            Text(
+              '${lessonsCount(active.length)} · ${studentsCount(students)}',
+              style: const TextStyle(fontSize: 13, color: AppColors.muted, fontWeight: FontWeight.w400),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: null,
         onPressed: () => openGroupForm(context, weekday: day.weekday),
         icon: const Icon(Icons.add),
         label: Text('حصة يوم ${weekdayName(day.weekday)}'),
@@ -71,86 +78,101 @@ class LessonCard extends StatelessWidget {
         border: upcoming && !l.cancelled ? Border.all(color: AppColors.primary, width: 2) : null,
       ),
       padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(
-                '${fmtTime(l.startMin)} – ${fmtTime(l.startMin + l.durationMin)}',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: l.cancelled ? AppColors.muted : AppColors.primary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${fmtTime(l.startMin)} – ${fmtTime(l.startMin + l.durationMin)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: l.cancelled ? AppColors.muted : AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      g.name,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        decoration: l.cancelled ? TextDecoration.lineThrough : null,
+                        color: l.cancelled ? AppColors.muted : AppColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        KindPill(g),
+                        if (g.stage.isNotEmpty) Pill(g.stage, fg: AppColors.ink, bg: AppColors.soft),
+                        if (l.cancelled) const Pill('ملغية', fg: AppColors.unpaid, bg: AppColors.unpaidSoft),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                g.name,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  decoration: l.cancelled ? TextDecoration.lineThrough : null,
-                  color: l.cancelled ? AppColors.muted : AppColors.ink,
-                ),
+              PopupMenuButton<String>(
+                tooltip: 'خيارات',
+                onSelected: (v) async {
+                  if (v == 'edit') openGroupForm(context, group: g);
+                  if (v == 'cancel') await store.toggleCancelled(l);
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'edit', child: Text('تعديل الحصة')),
+                  PopupMenuItem(value: 'cancel', child: Text(l.cancelled ? 'إرجاع الحصة' : 'إلغاء حصة اليوم ده بس')),
+                ],
               ),
-              const SizedBox(height: 6),
-              Wrap(spacing: 6, runSpacing: 6, children: [
-                KindPill(g),
-                if (g.stage.isNotEmpty) Pill(g.stage, fg: AppColors.ink, bg: AppColors.soft),
-                if (l.cancelled) const Pill('ملغية', fg: AppColors.unpaid, bg: AppColors.unpaidSoft),
-              ]),
-            ]),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'خيارات',
-            onSelected: (v) async {
-              if (v == 'edit') openGroupForm(context, group: g);
-              if (v == 'cancel') await store.toggleCancelled(l);
-            },
-            itemBuilder: (_) => [
-              const PopupMenuItem(value: 'edit', child: Text('تعديل الحصة')),
-              PopupMenuItem(value: 'cancel', child: Text(l.cancelled ? 'إرجاع الحصة' : 'إلغاء حصة اليوم ده بس')),
             ],
           ),
-        ]),
-        if (!l.cancelled) ...[
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsetsDirectional.only(end: 8),
-            child: Row(children: [
-              Expanded(
-                child: _ReminderToggle(
-                  label: 'تذكير البداية',
-                  on: g.remindStart,
-                  onChanged: (v) => store.setGroupReminder(g, start: v),
-                ),
+          if (!l.cancelled) ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(end: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ReminderToggle(
+                      label: 'تذكير البداية',
+                      on: g.remindStart,
+                      onChanged: (v) => store.setGroupReminder(g, start: v),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ReminderToggle(
+                      label: 'تذكير النهاية',
+                      on: g.remindEnd,
+                      onChanged: (v) => store.setGroupReminder(g, end: v),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _ReminderToggle(
-                  label: 'تذكير النهاية',
-                  on: g.remindEnd,
-                  onChanged: (v) => store.setGroupReminder(g, end: v),
-                ),
-              ),
-            ]),
-          ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          if (members.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('مفيش طلاب في الحصة دي لسه', style: TextStyle(color: AppColors.muted)),
+            ),
+          for (final s in members)
+            _StudentRow(
+              student: s,
+              status: d.billFor(s, month, now).status,
+              absent: d.isAbsent(l, s.id),
+              showAttendance: perLesson && happened && !l.cancelled,
+              onToggleAbsent: () => store.toggleAbsent(l, s.id),
+            ),
         ],
-        const SizedBox(height: 6),
-        if (members.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('مفيش طلاب في الحصة دي لسه', style: TextStyle(color: AppColors.muted)),
-          ),
-        for (final s in members)
-          _StudentRow(
-            student: s,
-            status: d.billFor(s, month, now).status,
-            absent: d.isAbsent(l, s.id),
-            showAttendance: perLesson && happened && !l.cancelled,
-            onToggleAbsent: () => store.toggleAbsent(l, s.id),
-          ),
-      ]),
+      ),
     );
   }
 }
@@ -175,17 +197,25 @@ class _ReminderToggle extends StatelessWidget {
         onTap: () => onChanged(!on),
         child: SizedBox(
           height: 42,
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(on ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
-                size: 18, color: on ? const Color(0xFF1E3A8A) : AppColors.muted),
-            const SizedBox(width: 6),
-            Text(label,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                on ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
+                size: 18,
+                color: on ? const Color(0xFF1E3A8A) : AppColors.muted,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: on ? FontWeight.w600 : FontWeight.w400,
                   color: on ? const Color(0xFF1E3A8A) : AppColors.muted,
-                )),
-          ]),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -212,31 +242,37 @@ class _StudentRow extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StudentPage(studentId: student.id))),
+      onLongPress: () => showStudentActions(context, student),
       child: Padding(
         padding: const EdgeInsetsDirectional.only(top: 6, bottom: 6, end: 8),
-        child: Row(children: [
-          Avatar(student.name, size: 36),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(student.name, style: const TextStyle(fontSize: 15)),
-              if (student.family.isNotEmpty)
-                Text('إخوات: ${student.family}', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
-            ]),
-          ),
-          if (showAttendance) ...[
-            TextButton(
-              onPressed: onToggleAbsent,
-              style: TextButton.styleFrom(
-                foregroundColor: absent ? AppColors.unpaid : AppColors.paid,
-                minimumSize: const Size(56, 36),
+        child: Row(
+          children: [
+            Avatar(student.name, size: 36),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(student.name, style: const TextStyle(fontSize: 15)),
+                  if (student.family.isNotEmpty)
+                    Text('إخوات: ${student.family}', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                ],
               ),
-              child: Text(absent ? 'غاب' : 'حضر'),
             ),
-            const SizedBox(width: 4),
+            if (showAttendance) ...[
+              TextButton(
+                onPressed: onToggleAbsent,
+                style: TextButton.styleFrom(
+                  foregroundColor: absent ? AppColors.unpaid : AppColors.paid,
+                  minimumSize: const Size(56, 36),
+                ),
+                child: Text(absent ? 'غاب' : 'حضر'),
+              ),
+              const SizedBox(width: 4),
+            ],
+            StatusPill(status),
           ],
-          StatusPill(status),
-        ]),
+        ),
       ),
     );
   }

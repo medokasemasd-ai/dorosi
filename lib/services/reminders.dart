@@ -30,12 +30,16 @@ List<PlannedReminder> planReminders(AppData d, DateTime now, {int days = 28}) {
       final at = l.start.subtract(Duration(minutes: s.startLeadMin));
       if (at.isAfter(now)) {
         final lead = s.startLeadMin == 0 ? 'الآن' : 'بعد ${minutesCount(s.startLeadMin)}';
-        out.add(PlannedReminder(id, at, 'تبدأ الحصة $lead', '${l.group.name} · ${fmtTime(l.startMin)} · $who', 'start'));
+        out.add(
+          PlannedReminder(id, at, 'تبدأ الحصة $lead', '${l.group.name} · ${fmtTime(l.startMin)} · $who', 'start'),
+        );
       }
     }
     id++;
     if (s.remindEnd && l.group.remindEnd && l.end.isAfter(now)) {
-      out.add(PlannedReminder(id, l.end, 'انتهت الحصة', '${l.group.name} · ${fmtTime(l.startMin + l.durationMin)}', 'end'));
+      out.add(
+        PlannedReminder(id, l.end, 'انتهت الحصة', '${l.group.name} · ${fmtTime(l.startMin + l.durationMin)}', 'end'),
+      );
     }
     id++;
   }
@@ -47,16 +51,30 @@ List<PlannedReminder> planReminders(AppData d, DateTime now, {int days = 28}) {
       final day = s.paymentDay <= 0 || s.paymentDay > lastDay ? lastDay : s.paymentDay;
       final at = DateTime(m.year, m.month, day, s.paymentHour);
       if (at.isAfter(now)) {
-        out.add(PlannedReminder(900000 + i, at, 'مراجعة مدفوعات ${monthName(m)}',
-            'افتح دروسي وشوف مين دفع ومين لسه', 'payment'));
+        out.add(
+          PlannedReminder(
+            900000 + i,
+            at,
+            'مراجعة مدفوعات ${monthName(m)}',
+            'افتح دروسي وشوف مين دفع ومين لسه',
+            'payment',
+          ),
+        );
       }
     }
   }
 
   // Reminders are planned a few weeks ahead; nudge the user to open the app
   // before they run out.
-  out.add(PlannedReminder(999999, now.add(Duration(days: days - 1)), 'افتح دروسي',
-      'افتح التطبيق مرة عشان التذكيرات تفضل شغالة', 'payment'));
+  out.add(
+    PlannedReminder(
+      999999,
+      now.add(Duration(days: days - 1)),
+      'افتح دروسي',
+      'افتح التطبيق مرة عشان التذكيرات تفضل شغالة',
+      'payment',
+    ),
+  );
   return out;
 }
 
@@ -106,22 +124,22 @@ class Reminders {
     for (final r in planReminders(d, DateTime.now())) {
       final ch = _channels[r.channel]!;
       Future<void> schedule() => _plugin.zonedSchedule(
-            id: r.id,
-            title: r.title,
-            body: r.body,
-            scheduledDate: tz.TZDateTime.from(r.at, tz.local),
-            notificationDetails: NotificationDetails(
-              android: AndroidNotificationDetails(
-                r.channel,
-                ch.$1,
-                channelDescription: ch.$2,
-                importance: Importance.high,
-                priority: Priority.high,
-                icon: '@drawable/ic_notification',
-              ),
-            ),
-            androidScheduleMode: mode,
-          );
+        id: r.id,
+        title: r.title,
+        body: r.body,
+        scheduledDate: tz.TZDateTime.from(r.at, tz.local),
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            r.channel,
+            ch.$1,
+            channelDescription: ch.$2,
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@drawable/ic_notification',
+          ),
+        ),
+        androidScheduleMode: mode,
+      );
       try {
         await schedule();
       } catch (e) {
@@ -140,8 +158,13 @@ class Reminders {
       title: 'تجربة التذكير',
       body: 'التذكيرات شغالة تمام',
       notificationDetails: const NotificationDetails(
-        android: AndroidNotificationDetails('start', 'بداية الحصة',
-            importance: Importance.high, priority: Priority.high, icon: '@drawable/ic_notification'),
+        android: AndroidNotificationDetails(
+          'start',
+          'بداية الحصة',
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@drawable/ic_notification',
+        ),
       ),
     );
   }

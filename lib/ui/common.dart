@@ -5,11 +5,19 @@ import '../models.dart';
 import 'theme.dart';
 
 class Panel extends StatelessWidget {
-  const Panel({super.key, required this.child, this.padding = const EdgeInsets.all(16), this.onTap, this.color});
+  const Panel({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+    this.onTap,
+    this.onLongPress,
+    this.color,
+  });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final Color? color;
 
   @override
@@ -18,7 +26,11 @@ class Panel extends StatelessWidget {
       color: color ?? AppColors.card,
       borderRadius: BorderRadius.circular(18),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(onTap: onTap, child: Padding(padding: padding, child: child)),
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Padding(padding: padding, child: child),
+      ),
     );
   }
 }
@@ -37,7 +49,10 @@ class Avatar extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(color: AppColors.soft, borderRadius: BorderRadius.circular(size * 0.32)),
-      child: Text(letter, style: TextStyle(fontSize: size * 0.38, fontWeight: FontWeight.w700)),
+      child: Text(
+        letter,
+        style: TextStyle(fontSize: size * 0.38, fontWeight: FontWeight.w700),
+      ),
     );
   }
 }
@@ -55,10 +70,16 @@ class Pill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (icon != null) ...[Icon(icon, size: 14, color: fg), const SizedBox(width: 4)],
-        Text(text, style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600)),
-      ]),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[Icon(icon, size: 14, color: fg), const SizedBox(width: 4)],
+          Text(
+            text,
+            style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -111,10 +132,14 @@ class SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 10),
-      child: Row(children: [
-        Expanded(child: Text(text, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
-        ?trailing,
-      ]),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(text, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          ),
+          ?trailing,
+        ],
+      ),
     );
   }
 }
@@ -130,17 +155,30 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 48, color: AppColors.muted),
-        const SizedBox(height: 12),
-        Text(text, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, fontSize: 15, height: 1.6)),
-        if (action != null) ...[const SizedBox(height: 16), action!],
-      ]),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 48, color: AppColors.muted),
+          const SizedBox(height: 12),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.muted, fontSize: 15, height: 1.6),
+          ),
+          if (action != null) ...[const SizedBox(height: 16), action!],
+        ],
+      ),
     );
   }
 }
 
-Future<bool> confirm(BuildContext context, String title, String body, {String ok = 'تأكيد', bool danger = false}) async {
+Future<bool> confirm(
+  BuildContext context,
+  String title,
+  String body, {
+  String ok = 'تأكيد',
+  bool danger = false,
+}) async {
   final r = await showDialog<bool>(
     context: context,
     builder: (c) => AlertDialog(

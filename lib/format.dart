@@ -36,7 +36,11 @@ String fmtDuration(int minutes) {
   final h = minutes ~/ 60;
   final m = minutes % 60;
   if (h == 0) return '${arNum(m)} دقيقة';
-  final hs = h == 1 ? 'ساعة' : h == 2 ? 'ساعتين' : '${arNum(h)} ساعات';
+  final hs = h == 1
+      ? 'ساعة'
+      : h == 2
+      ? 'ساعتين'
+      : '${arNum(h)} ساعات';
   if (m == 0) return hs;
   if (m == 30) return '$hs ونص';
   return '$hs و${arNum(m)} دقيقة';
@@ -66,8 +70,18 @@ const weekOrder = [
 String weekdayName(int weekday) => weekdayNames[weekday]!;
 
 const _months = [
-  'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+  'يناير',
+  'فبراير',
+  'مارس',
+  'أبريل',
+  'مايو',
+  'يونيو',
+  'يوليو',
+  'أغسطس',
+  'سبتمبر',
+  'أكتوبر',
+  'نوفمبر',
+  'ديسمبر',
 ];
 
 String monthName(DateTime d, {bool withYear = false}) =>
@@ -103,9 +117,17 @@ String fmtCountdown(Duration d) {
   final m = mins % 60;
   if (h >= 24) {
     final days = (h / 24).round();
-    return days == 1 ? 'بعد يوم' : days == 2 ? 'بعد يومين' : 'بعد ${arNum(days)} أيام';
+    return days == 1
+        ? 'بعد يوم'
+        : days == 2
+        ? 'بعد يومين'
+        : 'بعد ${arNum(days)} أيام';
   }
-  final hs = h == 1 ? 'ساعة' : h == 2 ? 'ساعتين' : '${arNum(h)} ساعات';
+  final hs = h == 1
+      ? 'ساعة'
+      : h == 2
+      ? 'ساعتين'
+      : '${arNum(h)} ساعات';
   return m == 0 ? 'بعد $hs' : 'بعد $hs و${arNum(m)} دقيقة';
 }
 

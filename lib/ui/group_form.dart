@@ -4,10 +4,15 @@ import '../format.dart';
 import '../models.dart';
 import '../store.dart';
 import 'common.dart';
+import 'student_form.dart';
 import 'theme.dart';
 
-Future<void> openGroupForm(BuildContext context, {Group? group, int? weekday}) =>
-    Navigator.push(context, MaterialPageRoute(builder: (_) => GroupForm(group: group, weekday: weekday)));
+Future<void> openGroupForm(BuildContext context, {Group? group, int? weekday}) => Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => GroupForm(group: group, weekday: weekday),
+  ),
+);
 
 /// "السبت والثلاثاء · ٦:٠٠ م" or "٣ حصص مراجعة من ١٢ أكتوبر".
 String scheduleSummary(Group g) {
@@ -51,7 +56,8 @@ class _GroupFormState extends State<GroupForm> {
   late bool _remindStart = _orig?.remindStart ?? true;
   late bool _remindEnd = _orig?.remindEnd ?? true;
   late DateTime _start = _orig?.createdAt ?? DateTime(DateTime.now().year, DateTime.now().month);
-  late final List<WeeklySlot> _slots = _orig?.slots.map((e) => e.copy()).toList() ??
+  late final List<WeeklySlot> _slots =
+      _orig?.slots.map((e) => e.copy()).toList() ??
       [WeeklySlot(weekday: widget.weekday ?? DateTime.saturday, startMin: 16 * 60, durationMin: 90)];
   late final List<DatedSession> _sessions = _orig?.sessions.map((e) => e.copy()).toList() ?? [];
   late final Set<String> _students = {...?_orig?.studentIds};
@@ -77,9 +83,13 @@ class _GroupFormState extends State<GroupForm> {
                   await store.setGroupArchived(g, !g.archived);
                   if (context.mounted) Navigator.pop(context);
                 } else if (v == 'delete') {
-                  final ok = await confirm(context, 'حذف ${g.name}؟',
-                      'الحصة هتتمسح من الجدول، وحساب الطلاب عنها هيتشال. لو الحصة خلصت بس، الأفضل تنقلها للسابقة.',
-                      ok: 'حذف', danger: true);
+                  final ok = await confirm(
+                    context,
+                    'حذف ${g.name}؟',
+                    'الحصة هتتمسح من الجدول، وحساب الطلاب عنها هيتشال. لو الحصة خلصت بس، الأفضل تنقلها للسابقة.',
+                    ok: 'حذف',
+                    danger: true,
+                  );
                   if (ok) {
                     await store.deleteGroup(g);
                     if (context.mounted) Navigator.pop(context);
@@ -87,7 +97,10 @@ class _GroupFormState extends State<GroupForm> {
                 }
               },
               itemBuilder: (_) => [
-                PopupMenuItem(value: 'archive', child: Text(_orig.archived ? 'رجّعها للجدول' : 'الحصة خلصت (نقلها للسابقة)')),
+                PopupMenuItem(
+                  value: 'archive',
+                  child: Text(_orig.archived ? 'رجّعها للجدول' : 'الحصة خلصت (نقلها للسابقة)'),
+                ),
                 const PopupMenuItem(value: 'delete', child: Text('حذف الحصة')),
               ],
             ),
@@ -125,27 +138,42 @@ class _GroupFormState extends State<GroupForm> {
             if (_kind == GroupKind.review)
               const Padding(
                 padding: EdgeInsets.only(top: 8),
-                child: Text('حصص مراجعة قبل الامتحان بتواريخ محددة، وبعدها تختفي من الجدول لوحدها.',
-                    style: TextStyle(color: AppColors.muted, fontSize: 13)),
+                child: Text(
+                  'حصص مراجعة قبل الامتحان بتواريخ محددة، وبعدها تختفي من الجدول لوحدها.',
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
               ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _name,
               decoration: InputDecoration(
                 labelText: 'اسم الحصة',
-                hintText: _kind == GroupKind.individual ? 'مثال: أحمد محمود (فيزياء)' : 'مثال: الثالث الثانوي · مجموعة أ',
+                hintText: _kind == GroupKind.individual
+                    ? 'مثال: أحمد محمود (فيزياء)'
+                    : 'مثال: الثالث الثانوي · مجموعة أ',
               ),
               validator: (v) => (v ?? '').trim().isEmpty ? 'اكتب اسم الحصة' : null,
             ),
             const SizedBox(height: 12),
-            TextField(controller: _stage, decoration: const InputDecoration(labelText: 'المرحلة / الصف')),
+            TextField(
+              controller: _stage,
+              decoration: const InputDecoration(labelText: 'المرحلة / الصف'),
+            ),
             if (stages.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Wrap(spacing: 6, runSpacing: 6, children: [
-                  for (final o in stages.take(8))
-                    ActionChip(label: Text(o), onPressed: () => _stage.text = o, visualDensity: VisualDensity.compact),
-                ]),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final o in stages.take(8))
+                      ActionChip(
+                        label: Text(o),
+                        onPressed: () => _stage.text = o,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                  ],
+                ),
               ),
             const SizedBox(height: 20),
             const SectionTitle('الحساب'),
@@ -173,7 +201,11 @@ class _GroupFormState extends State<GroupForm> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               onTap: () async {
                 final p = await showDatePicker(
-                    context: context, initialDate: _start, firstDate: DateTime(2020), lastDate: DateTime(2100));
+                  context: context,
+                  initialDate: _start,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2100),
+                );
                 if (p != null) setState(() => _start = p);
               },
               child: ListTile(
@@ -188,11 +220,15 @@ class _GroupFormState extends State<GroupForm> {
               SectionTitle(
                 'المواعيد كل أسبوع',
                 trailing: TextButton.icon(
-                  onPressed: () => setState(() => _slots.add(WeeklySlot(
+                  onPressed: () => setState(
+                    () => _slots.add(
+                      WeeklySlot(
                         weekday: _slots.isEmpty ? (widget.weekday ?? DateTime.saturday) : _slots.last.weekday,
                         startMin: _slots.isEmpty ? 16 * 60 : _slots.last.startMin,
                         durationMin: _slots.isEmpty ? 90 : _slots.last.durationMin,
-                      ))),
+                      ),
+                    ),
+                  ),
                   icon: const Icon(Icons.add),
                   label: const Text('ميعاد'),
                 ),
@@ -223,37 +259,58 @@ class _GroupFormState extends State<GroupForm> {
             if (students.isNotEmpty)
               Panel(
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Column(children: [
-                  for (final s in students)
-                    CheckboxListTile(
-                      value: _students.contains(s.id),
-                      onChanged: (v) => setState(() => v == true ? _students.add(s.id) : _students.remove(s.id)),
-                      title: Text(s.name),
-                      subtitle: s.stage.isEmpty && s.family.isEmpty
-                          ? null
-                          : Text([if (s.stage.isNotEmpty) s.stage, if (s.family.isNotEmpty) 'عائلة ${s.family}'].join(' · ')),
-                    ),
-                ]),
+                child: Column(
+                  children: [
+                    for (final s in students)
+                      CheckboxListTile(
+                        value: _students.contains(s.id),
+                        onChanged: (v) => setState(() => v == true ? _students.add(s.id) : _students.remove(s.id)),
+                        title: Text(s.name),
+                        subtitle: s.stage.isEmpty && s.family.isEmpty
+                            ? null
+                            : Text(
+                                [
+                                  if (s.stage.isNotEmpty) s.stage,
+                                  if (s.family.isNotEmpty) 'عائلة ${s.family}',
+                                ].join(' · '),
+                              ),
+                        secondary: PopupMenuButton<String>(
+                          tooltip: 'تعديل أو حذف',
+                          onSelected: (v) => _studentAction(v, s),
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: 'edit', child: Text('تعديل الطالب')),
+                            PopupMenuItem(value: 'delete', child: Text('حذف الطالب')),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
             const SizedBox(height: 20),
             const SectionTitle('التذكير'),
             Panel(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Column(children: [
-                SwitchListTile(
-                  value: _remindStart,
-                  onChanged: (v) => setState(() => _remindStart = v),
-                  title: const Text('تذكير قبل بداية الحصة'),
-                ),
-                SwitchListTile(
-                  value: _remindEnd,
-                  onChanged: (v) => setState(() => _remindEnd = v),
-                  title: const Text('تنبيه عند نهاية الحصة'),
-                ),
-              ]),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    value: _remindStart,
+                    onChanged: (v) => setState(() => _remindStart = v),
+                    title: const Text('تذكير قبل بداية الحصة'),
+                  ),
+                  SwitchListTile(
+                    value: _remindEnd,
+                    onChanged: (v) => setState(() => _remindEnd = v),
+                    title: const Text('تنبيه عند نهاية الحصة'),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
-            TextField(controller: _notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات (اختياري)')),
+            TextField(
+              controller: _notes,
+              maxLines: 2,
+              decoration: const InputDecoration(labelText: 'ملاحظات (اختياري)'),
+            ),
           ],
         ),
       ),
@@ -263,11 +320,13 @@ class _GroupFormState extends State<GroupForm> {
   void _addSession() {
     final last = _sessions.isEmpty ? null : _sessions.last;
     final base = last?.date ?? DateTime.now();
-    _sessions.add(DatedSession(
-      date: DateTime(base.year, base.month, base.day + (last == null ? 1 : 1)),
-      startMin: last?.startMin ?? 16 * 60,
-      durationMin: last?.durationMin ?? 120,
-    ));
+    _sessions.add(
+      DatedSession(
+        date: DateTime(base.year, base.month, base.day + (last == null ? 1 : 1)),
+        startMin: last?.startMin ?? 16 * 60,
+        durationMin: last?.durationMin ?? 120,
+      ),
+    );
   }
 
   Widget _slotRow(int i) {
@@ -276,22 +335,26 @@ class _GroupFormState extends State<GroupForm> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Panel(
         padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-        child: Row(children: [
-          DropdownButton<int>(
-            value: s.weekday,
-            underline: const SizedBox(),
-            items: [for (final w in weekOrder) DropdownMenuItem(value: w, child: Text(weekdayName(w)))],
-            onChanged: (v) => setState(() => s.weekday = v!),
-          ),
-          const SizedBox(width: 8),
-          Expanded(child: _TimeButton(minutes: s.startMin, onPicked: (m) => setState(() => s.startMin = m))),
-          _DurationButton(minutes: s.durationMin, onPicked: (m) => setState(() => s.durationMin = m)),
-          IconButton(
-            tooltip: 'حذف الميعاد',
-            onPressed: () => setState(() => _slots.removeAt(i)),
-            icon: const Icon(Icons.close),
-          ),
-        ]),
+        child: Row(
+          children: [
+            DropdownButton<int>(
+              value: s.weekday,
+              underline: const SizedBox(),
+              items: [for (final w in weekOrder) DropdownMenuItem(value: w, child: Text(weekdayName(w)))],
+              onChanged: (v) => setState(() => s.weekday = v!),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _TimeButton(minutes: s.startMin, onPicked: (m) => setState(() => s.startMin = m)),
+            ),
+            _DurationButton(minutes: s.durationMin, onPicked: (m) => setState(() => s.durationMin = m)),
+            IconButton(
+              tooltip: 'حذف الميعاد',
+              onPressed: () => setState(() => _slots.removeAt(i)),
+              icon: const Icon(Icons.close),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -302,25 +365,44 @@ class _GroupFormState extends State<GroupForm> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Panel(
         padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-        child: Row(children: [
-          TextButton(
-            onPressed: () async {
-              final p = await showDatePicker(
-                  context: context, initialDate: s.date, firstDate: DateTime(2020), lastDate: DateTime(2100));
-              if (p != null) setState(() => s.date = p);
-            },
-            child: Text(fmtShortDate(s.date)),
-          ),
-          Expanded(child: _TimeButton(minutes: s.startMin, onPicked: (m) => setState(() => s.startMin = m))),
-          _DurationButton(minutes: s.durationMin, onPicked: (m) => setState(() => s.durationMin = m)),
-          IconButton(
-            tooltip: 'حذف الحصة',
-            onPressed: () => setState(() => _sessions.removeAt(i)),
-            icon: const Icon(Icons.close),
-          ),
-        ]),
+        child: Row(
+          children: [
+            TextButton(
+              onPressed: () async {
+                final p = await showDatePicker(
+                  context: context,
+                  initialDate: s.date,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2100),
+                );
+                if (p != null) setState(() => s.date = p);
+              },
+              child: Text(fmtShortDate(s.date)),
+            ),
+            Expanded(
+              child: _TimeButton(minutes: s.startMin, onPicked: (m) => setState(() => s.startMin = m)),
+            ),
+            _DurationButton(minutes: s.durationMin, onPicked: (m) => setState(() => s.durationMin = m)),
+            IconButton(
+              tooltip: 'حذف الحصة',
+              onPressed: () => setState(() => _sessions.removeAt(i)),
+              icon: const Icon(Icons.close),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _studentAction(String v, Student s) async {
+    if (v == 'edit') {
+      final inClass = _students.contains(s.id);
+      await openStudentForm(context, student: s);
+      // Keep the tick for this class as it is in this form; it is saved with the class.
+      if (mounted) setState(() => inClass ? _students.add(s.id) : _students.remove(s.id));
+    } else if (v == 'delete') {
+      if (await deleteStudentAsk(context, s) && mounted) setState(() => _students.remove(s.id));
+    }
   }
 
   Future<void> _quickAddStudent() async {
@@ -332,14 +414,27 @@ class _GroupFormState extends State<GroupForm> {
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('طالب جديد'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: name, autofocus: true, decoration: const InputDecoration(labelText: 'الاسم')),
-          const SizedBox(height: 10),
-          TextField(
-              controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'الموبايل')),
-          const SizedBox(height: 10),
-          TextField(controller: family, decoration: const InputDecoration(labelText: 'العائلة (للإخوات)')),
-        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: name,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'الاسم'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: phone,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'الموبايل'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: family,
+              decoration: const InputDecoration(labelText: 'العائلة (للإخوات)'),
+            ),
+          ],
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('إلغاء')),
           FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('إضافة')),
