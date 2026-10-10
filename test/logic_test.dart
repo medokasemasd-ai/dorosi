@@ -251,4 +251,32 @@ void main() {
       expect(() => again.importJson('{"x":1}'), throwsFormatException);
     });
   });
+
+  test('moving Saturday to Tuesday keeps the count and bills per lesson', () async {
+    // Saturday and Tuesday, per lesson. October 2026: Sat 3, Tue 6, Sat 10, Tue 13.
+    final g = _group(
+      'g',
+      PayType.perLesson,
+      100,
+      slots: [
+        WeeklySlot(weekday: DateTime.saturday, startMin: 17 * 60, durationMin: 60),
+        WeeklySlot(weekday: DateTime.tuesday, startMin: 17 * 60, durationMin: 60),
+      ],
+      students: ['s1'],
+    );
+    final store = AppStore(MemoryStorage());
+    store.data = AppData(students: [s], groups: [g]);
+    final sat10 = store.data.lessonsOn(DateTime(2026, 10, 10)).single;
+    await store.moveLesson(sat10, DateTime(2026, 10, 13), 19 * 60);
+    final tue13 = store.data.lessonsOn(DateTime(2026, 10, 13));
+    expect(tue13.length, 2);
+    expect(tue13.last.extra, isTrue);
+    expect(store.data.lessonsOn(DateTime(2026, 10, 10)).single.cancelled, isTrue);
+    // Up to Oct 14: Sat 3, Tue 6, Tue 13 twice; Sat 10 cancelled.
+    expect(store.data.billFor(s, '2026-10', DateTime(2026, 10, 14, 23)).due, 400);
+    final all = store.data.lessonsOfStudent(s, DateTime(2026, 10, 1), DateTime(2026, 10, 14));
+    expect(all.where((l) => !l.cancelled).length, 4);
+    await store.removeExtraLesson(tue13.last);
+    expect(store.data.lessonsOn(DateTime(2026, 10, 13)).length, 1);
+  });
 }

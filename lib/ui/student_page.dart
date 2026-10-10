@@ -4,7 +4,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../format.dart';
 import '../models.dart';
 import '../store.dart';
+import '../data.dart';
 import 'common.dart';
+import 'day_page.dart';
 import 'group_form.dart';
 import 'payment_sheet.dart';
 import 'student_form.dart';
@@ -171,6 +173,8 @@ class _StudentPageState extends State<StudentPage> {
             ),
           ),
           const SizedBox(height: 16),
+          _LessonLog(student: s, month: _month),
+          const SizedBox(height: 16),
           const SectionTitle('الحصص'),
           if (groups.isEmpty)
             const Text('مش مسجل في أي حصة', style: TextStyle(color: AppColors.muted))
@@ -312,4 +316,138 @@ String whatsappNumber(String phone) {
   if (p.startsWith('00')) return p.substring(2);
   if (p.startsWith('0')) return '20${p.substring(1)}';
   return p;
+}
+
+String _taken(int n) => n == 0 ? 'محضرش ولا حصة' : 'حضر ${lessonsCount(n)}';
+
+enum _Mark { taken, absent, cancelled, coming }
+
+/// The month's lessons for one student, week by week, with how many were taken.
+class _LessonLog extends StatelessWidget {
+  const _LessonLog({required this.student, required this.month});
+
+  final Student student;
+  final DateTime month;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final d = store.data;
+    final now = DateTime.now();
+    final lessons = d.lessonsOfStudent(student, month, DateTime(month.year, month.month + 1, 0));
+    _Mark mark(Lesson l) {
+      if (l.cancelled) return _Mark.cancelled;
+      if (l.start.isAfter(now)) return _Mark.coming;
+      return d.isAbsent(l, student.id) ? _Mark.absent : _Mark.taken;
+    }
+
+    final marks = {for (final l in lessons) l.key: mark(l)};
+    int count(_Mark m) => marks.values.where((x) => x == m).length;
+    final weeks = <DateTime, List<Lesson>>{};
+    for (final l in lessons) {
+      weeks.putIfAbsent(weekStart(l.date), () => []).add(l);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionTitle('الحصص اللي اتاخدت'),
+        Panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (lessons.isEmpty)
+                const Text('مفيش حصص في الشهر ده', style: TextStyle(color: AppColors.muted))
+              else ...[
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    Pill('حضر ${arNum(count(_Mark.taken))}', fg: AppColors.paid, bg: AppColors.paidSoft),
+                    if (count(_Mark.absent) > 0)
+                      Pill('غاب ${arNum(count(_Mark.absent))}', fg: AppColors.unpaid, bg: AppColors.unpaidSoft),
+                    if (count(_Mark.cancelled) > 0)
+                      Pill('اتلغى ${arNum(count(_Mark.cancelled))}', fg: AppColors.muted, bg: AppColors.soft),
+                    if (count(_Mark.coming) > 0)
+                      Pill('لسه جاي ${arNum(count(_Mark.coming))}', fg: AppColors.primary, bg: AppColors.primarySoft),
+                  ],
+                ),
+                for (final w in weeks.entries) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    'أسبوع ${fmtShortDate(w.key)} · ${_taken(w.value.where((l) => marks[l.key] == _Mark.taken).length)}',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.muted),
+                  ),
+                  for (final l in w.value) _row(context, store, l, marks[l.key]!),
+                ],
+                const SizedBox(height: 8),
+                const Text(
+                  'دوس على أي حصة عشان تغيّرها: حضر، غاب، اتلغت، أو تنقلها ليوم تاني.',
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _row(BuildContext context, AppStore store, Lesson l, _Mark m) {
+    final (label, fg, bg) = switch (m) {
+      _Mark.taken => ('حضر', AppColors.paid, AppColors.paidSoft),
+      _Mark.absent => ('غاب', AppColors.unpaid, AppColors.unpaidSoft),
+      _Mark.cancelled => ('اتلغت', AppColors.muted, AppColors.soft),
+      _Mark.coming => ('جاية', AppColors.primary, AppColors.primarySoft),
+    };
+    return PopupMenuButton<String>(
+      tooltip: 'تغيير',
+      onSelected: (v) async {
+        switch (v) {
+          case 'taken':
+            if (l.cancelled) await store.setCancelled(l, false);
+            await store.setAbsent(l, student.id, false);
+          case 'absent':
+            if (l.cancelled) await store.setCancelled(l, false);
+            await store.setAbsent(l, student.id, true);
+          default:
+            if (context.mounted) await lessonAction(context, l, v);
+        }
+      },
+      itemBuilder: (_) => [
+        if (m != _Mark.coming && m != _Mark.taken) const PopupMenuItem(value: 'taken', child: Text('حضر')),
+        if (m != _Mark.coming && m != _Mark.absent) const PopupMenuItem(value: 'absent', child: Text('غاب')),
+        PopupMenuItem(value: 'cancel', child: Text(l.cancelled ? 'إرجاع الحصة' : 'الحصة اتلغت')),
+        const PopupMenuItem(value: 'move', child: Text('نقلها ليوم أو معاد تاني')),
+        if (l.extra) const PopupMenuItem(value: 'remove', child: Text('حذف الحصة الزيادة دي')),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 92,
+              child: Text(
+                '${weekdayName(l.date.weekday)} ${fmtShortDate(l.date)}',
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+            Expanded(
+              child: Text(
+                '${fmtTime(l.startMin)} · ${l.group.name}${l.extra ? ' (زيادة)' : ''}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.muted,
+                  decoration: m == _Mark.cancelled ? TextDecoration.lineThrough : null,
+                ),
+              ),
+            ),
+            Pill(label, fg: fg, bg: bg),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -69,7 +69,6 @@ class LessonCard extends StatelessWidget {
     final month = monthKey(l.date);
     final happened = !l.start.isAfter(now);
     final upcoming = d.nextLesson(now)?.key == l.key;
-    final perLesson = g.payType == PayType.perLesson;
 
     return Container(
       decoration: BoxDecoration(
@@ -113,6 +112,7 @@ class LessonCard extends StatelessWidget {
                       children: [
                         KindPill(g),
                         if (g.stage.isNotEmpty) Pill(g.stage, fg: AppColors.ink, bg: AppColors.soft),
+                        if (l.extra) const Pill('حصة زيادة', fg: AppColors.primary, bg: AppColors.primarySoft),
                         if (l.cancelled) const Pill('ملغية', fg: AppColors.unpaid, bg: AppColors.unpaidSoft),
                       ],
                     ),
@@ -121,13 +121,13 @@ class LessonCard extends StatelessWidget {
               ),
               PopupMenuButton<String>(
                 tooltip: 'خيارات',
-                onSelected: (v) async {
-                  if (v == 'edit') openGroupForm(context, group: g);
-                  if (v == 'cancel') await store.toggleCancelled(l);
-                },
+                onSelected: (v) => lessonAction(context, l, v),
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'edit', child: Text('تعديل الحصة')),
                   PopupMenuItem(value: 'cancel', child: Text(l.cancelled ? 'إرجاع الحصة' : 'إلغاء حصة اليوم ده بس')),
+                  const PopupMenuItem(value: 'move', child: Text('نقل الحصة ليوم أو معاد تاني')),
+                  const PopupMenuItem(value: 'extra', child: Text('إضافة حصة زيادة (تعويض)')),
+                  if (l.extra) const PopupMenuItem(value: 'remove', child: Text('حذف الحصة الزيادة دي')),
+                  const PopupMenuItem(value: 'edit', child: Text('تعديل المواعيد الثابتة')),
                 ],
               ),
             ],
@@ -168,13 +168,57 @@ class LessonCard extends StatelessWidget {
               student: s,
               status: d.billFor(s, month, now).status,
               absent: d.isAbsent(l, s.id),
-              showAttendance: perLesson && happened && !l.cancelled,
+              showAttendance: happened && !l.cancelled,
               onToggleAbsent: () => store.toggleAbsent(l, s.id),
             ),
         ],
       ),
     );
   }
+}
+
+/// Runs a lesson menu choice: cancel, move, add an extra lesson, remove an extra one, edit the class.
+Future<void> lessonAction(BuildContext context, Lesson l, String v) async {
+  final store = StoreScope.read(context);
+  switch (v) {
+    case 'edit':
+      await openGroupForm(context, group: l.group);
+    case 'cancel':
+      await store.setCancelled(l, !l.cancelled);
+    case 'move':
+      final p = await pickDayAndTime(context, 'تنقل الحصة لإمتى؟', l.date, l.startMin);
+      if (p == null) return;
+      await store.moveLesson(l, p.$1, p.$2);
+      if (context.mounted) toast(context, 'الحصة اتنقلت ليوم ${weekdayName(p.$1.weekday)} ${fmtShortDate(p.$1)}');
+    case 'extra':
+      final p = await pickDayAndTime(context, 'الحصة الزيادة إمتى؟', l.date, l.startMin);
+      if (p == null) return;
+      await store.addExtraLesson(l.group, p.$1, p.$2, l.durationMin);
+      if (context.mounted) toast(context, 'اتضافت حصة يوم ${weekdayName(p.$1.weekday)} ${fmtShortDate(p.$1)}');
+    case 'remove':
+      if (await confirm(context, 'حذف الحصة الزيادة؟', 'الحصة دي بس هتتشال من الجدول.', ok: 'حذف', danger: true)) {
+        await store.removeExtraLesson(l);
+      }
+  }
+}
+
+/// Asks for a date, then a start time. Returns null if either is dismissed.
+Future<(DateTime, int)?> pickDayAndTime(BuildContext context, String title, DateTime date, int startMin) async {
+  final d = await showDatePicker(
+    context: context,
+    helpText: title,
+    initialDate: date,
+    firstDate: DateTime(2020),
+    lastDate: DateTime(2100),
+  );
+  if (d == null || !context.mounted) return null;
+  final t = await showTimePicker(
+    context: context,
+    helpText: 'الساعة كام؟',
+    initialTime: TimeOfDay(hour: startMin ~/ 60, minute: startMin % 60),
+  );
+  if (t == null) return null;
+  return (dateOnly(d), t.hour * 60 + t.minute);
 }
 
 class _ReminderToggle extends StatelessWidget {

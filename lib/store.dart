@@ -194,6 +194,44 @@ class AppStore extends ChangeNotifier {
     await _commit();
   }
 
+  Future<void> setAbsent(Lesson l, String studentId, bool absent) async {
+    final k = absenceKey(l, studentId);
+    absent ? data.absences.add(k) : data.absences.remove(k);
+    await _commit();
+  }
+
+  Future<void> setCancelled(Lesson l, bool cancelled) async {
+    cancelled ? data.cancelled.add(l.key) : data.cancelled.remove(l.key);
+    await _commit();
+  }
+
+  /// Adds a one-off lesson for [g] on [date], e.g. a make-up lesson.
+  Future<void> addExtraLesson(Group g, DateTime date, int startMin, int durationMin) async {
+    g.sessions.add(DatedSession(date: dateOnly(date), startMin: startMin, durationMin: durationMin));
+    await _commit();
+  }
+
+  /// Moves [l] to another day and time: a weekly lesson is cancelled for that
+  /// day and a make-up lesson is added; an extra lesson is simply moved.
+  Future<void> moveLesson(Lesson l, DateTime date, int startMin) async {
+    _removeSession(l);
+    if (!l.extra && l.group.slots.isNotEmpty) data.cancelled.add(l.key);
+    l.group.sessions.add(DatedSession(date: dateOnly(date), startMin: startMin, durationMin: l.durationMin));
+    await _commit();
+  }
+
+  Future<void> removeExtraLesson(Lesson l) async {
+    _removeSession(l);
+    data.absences.removeWhere((k) => k.startsWith('${l.key}|'));
+    data.cancelled.remove(l.key);
+    await _commit();
+  }
+
+  void _removeSession(Lesson l) {
+    final i = l.group.sessions.indexWhere((s) => dateOnly(s.date) == l.date && s.startMin == l.startMin);
+    if (i >= 0) l.group.sessions.removeAt(i);
+  }
+
   Future<void> updateSettings(void Function(Settings s) change) async {
     change(data.settings);
     await _commit();

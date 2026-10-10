@@ -95,7 +95,8 @@ class AppData {
         if (s.weekday == d.weekday) out.add(Lesson(g, d, s.startMin, s.durationMin));
       }
       for (final s in g.sessions) {
-        if (dateOnly(s.date) == d) out.add(Lesson(g, d, s.startMin, s.durationMin));
+        // On a weekly class a dated session is an extra or make-up lesson.
+        if (dateOnly(s.date) == d) out.add(Lesson(g, d, s.startMin, s.durationMin, extra: g.slots.isNotEmpty));
       }
     }
     for (final l in out) {
@@ -124,6 +125,20 @@ class AppData {
   }
 
   bool isAbsent(Lesson l, String studentId) => absences.contains(absenceKey(l, studentId));
+
+  /// Every lesson of [s]'s classes from [from] to [to] (dates, inclusive),
+  /// from the day the student joined.
+  List<Lesson> lessonsOfStudent(Student s, DateTime from, DateTime to) {
+    final ids = {for (final g in groupsOf(s, includeArchived: true)) g.id};
+    var d = dateOnly(from);
+    final joined = dateOnly(s.joinedAt);
+    if (d.isBefore(joined)) d = joined;
+    final out = <Lesson>[];
+    for (; !d.isAfter(dateOnly(to)); d = DateTime(d.year, d.month, d.day + 1)) {
+      out.addAll(lessonsOn(d, forBilling: true).where((l) => ids.contains(l.group.id)));
+    }
+    return out;
+  }
 
   // ---- billing ----
 
@@ -168,9 +183,12 @@ class AppData {
 String absenceKey(Lesson l, String studentId) => '${l.key}|$studentId';
 
 class Lesson {
-  Lesson(this.group, this.date, this.startMin, this.durationMin);
+  Lesson(this.group, this.date, this.startMin, this.durationMin, {this.extra = false});
 
   final Group group;
+
+  /// An extra or make-up lesson added on a date, outside the weekly schedule.
+  final bool extra;
   final DateTime date;
   final int startMin;
   final int durationMin;
