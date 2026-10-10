@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../store.dart';
 import 'groups_page.dart';
+import 'payments_page.dart';
 import 'schedule_page.dart';
 import 'settings_page.dart';
 import 'students_page.dart';
@@ -29,6 +30,7 @@ class _ShellState extends State<Shell> {
           SchedulePage(onOpenTab: (i) => setState(() => _tab = i)),
           const StudentsPage(),
           const GroupsPage(),
+          const PaymentsPage(),
           const SettingsPage(),
         ],
       ),
@@ -43,6 +45,11 @@ class _ShellState extends State<Shell> {
           ),
           NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'الطلاب'),
           NavigationDestination(icon: Icon(Icons.class_outlined), selectedIcon: Icon(Icons.class_), label: 'الحصص'),
+          NavigationDestination(
+            icon: Icon(Icons.payments_outlined),
+            selectedIcon: Icon(Icons.payments),
+            label: 'الدفع',
+          ),
           NavigationDestination(
             icon: Icon(Icons.notifications_none),
             selectedIcon: Icon(Icons.notifications),

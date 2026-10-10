@@ -28,7 +28,11 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - run: flutter build apk --release
+      - run: >-
+          flutter build apk --release
+          --build-name=1.0.${{ github.run_number }}
+          --build-number=${{ github.run_number }}
+          --dart-define=BUILD=${{ github.run_number }}
 
       - name: Name the APK
         run: cp build/app/outputs/flutter-apk/app-release.apk dorosi.apk
@@ -77,11 +81,15 @@ jobs:
         with:
           name: dorosi-apk
 
+      # A different file name for each release, so the phone never opens an older download by mistake.
+      - name: Name the file after the release
+        run: mv dorosi.apk dorosi-${{ github.run_number }}.apk
+
       - name: Publish as the latest release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: دروسي (نسخة ${{ github.run_number }})
-          body: نزّل ملف dorosi.apk على الموبايل وافتحه عشان تثبت التطبيق أو تحدّثه.
-          files: dorosi.apk
+          body: نزّل ملف dorosi-${{ github.run_number }}.apk على الموبايل وافتحه عشان تثبت التطبيق أو تحدّثه.
+          files: dorosi-${{ github.run_number }}.apk
           make_latest: true

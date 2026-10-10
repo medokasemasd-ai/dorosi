@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../format.dart';
 import '../models.dart';
@@ -12,6 +13,9 @@ import '../services/reminders.dart';
 import '../store.dart';
 import 'common.dart';
 import 'theme.dart';
+
+/// The release number, set by the build (empty in local builds).
+const appBuild = String.fromEnvironment('BUILD');
 
 /// The currencies the user can pick: symbol and name.
 const currencies = [('ج.م', 'جنيه مصري'), ('ر.س', 'ريال'), (r'$', 'دولار')];
@@ -82,7 +86,8 @@ class SettingsPage extends StatelessWidget {
                 if (s.remindPayment)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                    child: Row(
+                    child: Wrap(
+                      spacing: 16,
                       children: [
                         DropdownButton<int>(
                           value: s.paymentDay,
@@ -93,7 +98,6 @@ class SettingsPage extends StatelessWidget {
                           ],
                           onChanged: (v) => store.updateSettings((x) => x.paymentDay = v!),
                         ),
-                        const SizedBox(width: 16),
                         DropdownButton<int>(
                           value: s.paymentHour,
                           underline: const SizedBox(),
@@ -164,6 +168,33 @@ class SettingsPage extends StatelessWidget {
                   onPressed: () => _import(context, store),
                   icon: const Icon(Icons.download_outlined),
                   label: const Text('استرجاع من نسخة'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          const SectionTitle('التحديثات'),
+          Panel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  appBuild.isEmpty ? 'نسخة تجريبية' : 'النسخة اللي عندك: رقم ${arNum(int.parse(appBuild))}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'لو فيه نسخة أحدث، نزّلها وسطّبها فوق دي وبياناتك هتفضل زي ما هي.',
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () => launchUrl(
+                    Uri.parse('https://github.com/medokasemasd-ai/dorosi/releases/latest'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  icon: const Icon(Icons.system_update_outlined),
+                  label: const Text('شوف آخر نسخة'),
                 ),
               ],
             ),
