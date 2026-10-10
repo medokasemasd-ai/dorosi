@@ -18,8 +18,14 @@ Future<void> main() async {
     syncHomeWidget(data);
   };
   runApp(DorosiApp(store: store));
-  await Reminders.instance.init();
+  // Show the data first: a problem with reminders must never keep the app from opening.
   await store.load();
+  try {
+    await Reminders.instance.init();
+    store.onChanged?.call(store.data);
+  } catch (e) {
+    debugPrint('reminders unavailable: $e');
+  }
 }
 
 class DorosiApp extends StatefulWidget {

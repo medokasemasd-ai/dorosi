@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The release build removes resources it thinks are unused. The notification icon and
+     the widget layout are only referenced by name, so keep them explicitly. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/*,@layout/next_lesson_widget,@xml/next_lesson_widget_info" />

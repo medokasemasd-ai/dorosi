@@ -90,28 +90,46 @@ class Reminders {
     _ready = true;
   }
 
-  Future<void> reschedule(AppData d) async {
-    if (!_ready) return;
+  Future<void> _queue = Future.value();
+
+  /// Replaces all scheduled reminders. Calls are run one after another.
+  Future<void> reschedule(AppData d) {
+    if (!_ready) return Future.value();
+    return _queue = _queue.then((_) => _reschedule(d)).catchError((Object e) {
+      debugPrint('reschedule failed: $e');
+    });
+  }
+
+  Future<void> _reschedule(AppData d) async {
     await _plugin.cancelAll();
+    var mode = AndroidScheduleMode.exactAllowWhileIdle;
     for (final r in planReminders(d, DateTime.now())) {
       final ch = _channels[r.channel]!;
-      await _plugin.zonedSchedule(
-        id: r.id,
-        title: r.title,
-        body: r.body,
-        scheduledDate: tz.TZDateTime.from(r.at, tz.local),
-        notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
-            r.channel,
-            ch.$1,
-            channelDescription: ch.$2,
-            importance: Importance.high,
-            priority: Priority.high,
-            icon: '@drawable/ic_notification',
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      );
+      Future<void> schedule() => _plugin.zonedSchedule(
+            id: r.id,
+            title: r.title,
+            body: r.body,
+            scheduledDate: tz.TZDateTime.from(r.at, tz.local),
+            notificationDetails: NotificationDetails(
+              android: AndroidNotificationDetails(
+                r.channel,
+                ch.$1,
+                channelDescription: ch.$2,
+                importance: Importance.high,
+                priority: Priority.high,
+                icon: '@drawable/ic_notification',
+              ),
+            ),
+            androidScheduleMode: mode,
+          );
+      try {
+        await schedule();
+      } catch (e) {
+        // Exact alarms can be switched off by the user; fall back to inexact ones.
+        if (mode == AndroidScheduleMode.inexactAllowWhileIdle) rethrow;
+        mode = AndroidScheduleMode.inexactAllowWhileIdle;
+        await schedule();
+      }
     }
   }
 
