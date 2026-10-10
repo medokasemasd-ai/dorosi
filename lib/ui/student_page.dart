@@ -143,19 +143,45 @@ class _StudentPageState extends State<StudentPage> {
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Row(
                       children: [
-                        Expanded(
-                          child: Text(
-                            l.group.payType == PayType.perLesson
-                                ? '${l.group.name} (${lessonsCount(l.count)} × ${fmtMoney(l.price, currency)})'
-                                : '${l.group.name} (شهري)',
-                          ),
-                        ),
+                        Expanded(child: Text(billLineText(l, currency))),
                         Text(fmtMoney(l.amount, currency), style: const TextStyle(fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
+                if (bill.previous > 0) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: Text('باقي من الشهور اللي قبل كده', style: TextStyle(color: AppColors.unpaid)),
+                        ),
+                        Text(
+                          fmtMoney(bill.previous, currency),
+                          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.unpaid),
+                        ),
+                      ],
+                    ),
+                  ),
+                  for (final e in bill.previousMonths.entries)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: 12, bottom: 4),
+                      child: Text(
+                        '${monthName(parseMonthKey(e.key), withYear: true)}: ${fmtMoney(e.value, currency)}',
+                        style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                      ),
+                    ),
+                ],
+                if (bill.previous < 0)
+                  Text(
+                    'مدفوع مقدم من قبل كده: ${fmtMoney(-bill.previous, currency)}',
+                    style: const TextStyle(fontSize: 13, color: AppColors.paid),
+                  ),
                 const Divider(height: 20),
-                _line('المستحق', fmtMoney(bill.due, currency)),
+                _line(
+                  bill.previous == 0 ? 'المستحق' : 'المستحق كله',
+                  fmtMoney(bill.totalDue < 0 ? 0 : bill.totalDue, currency),
+                ),
                 _line('المدفوع', fmtMoney(bill.paid, currency), color: AppColors.paid),
                 _line(
                   'الباقي',
@@ -197,7 +223,7 @@ class _StudentPageState extends State<StudentPage> {
                       ),
                       Text(
                         '${fmtMoney(s.priceOverrides[g.id] ?? g.currentPrice, currency)}'
-                        '${g.payType == PayType.perLesson ? ' / حصة' : ' / شهر'}',
+                        '${g.payType == PayType.perLesson ? ' / ساعة' : ' / شهر'}',
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -318,7 +344,11 @@ String whatsappNumber(String phone) {
   return p;
 }
 
-String _taken(int n) => n == 0 ? 'محضرش ولا حصة' : 'حضر ${lessonsCount(n)}';
+/// A two-hour lesson counts as two lessons.
+String _taken(double n) {
+  if (n == 0) return 'محضرش ولا حصة';
+  return n == n.roundToDouble() ? 'حضر ${lessonsCount(n.toInt())}' : 'حضر ${arNum(n)} حصة';
+}
 
 enum _Mark { taken, absent, cancelled, coming }
 
@@ -342,7 +372,7 @@ class _LessonLog extends StatelessWidget {
     }
 
     final marks = {for (final l in lessons) l.key: mark(l)};
-    int count(_Mark m) => marks.values.where((x) => x == m).length;
+    double count(_Mark m) => lessons.where((l) => marks[l.key] == m).fold<double>(0, (a, l) => a + l.hours);
     final weeks = <DateTime, List<Lesson>>{};
     for (final l in lessons) {
       weeks.putIfAbsent(weekStart(l.date), () => []).add(l);
@@ -375,7 +405,7 @@ class _LessonLog extends StatelessWidget {
                 for (final w in weeks.entries) ...[
                   const SizedBox(height: 14),
                   Text(
-                    'أسبوع ${fmtShortDate(w.key)} · ${_taken(w.value.where((l) => marks[l.key] == _Mark.taken).length)}',
+                    'أسبوع ${fmtShortDate(w.key)} · ${_taken(w.value.where((l) => marks[l.key] == _Mark.taken).fold<double>(0, (a, l) => a + l.hours))}',
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.muted),
                   ),
                   for (final l in w.value) _row(context, store, l, marks[l.key]!),

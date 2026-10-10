@@ -113,7 +113,7 @@ class _GroupTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${fmtMoney(g.currentPrice, currency)} ${g.payType == PayType.perLesson ? '/ حصة' : '/ شهر'}',
+                  '${fmtMoney(g.currentPrice, currency)} ${g.payType == PayType.perLesson ? '/ ساعة' : '/ شهر'}',
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ],

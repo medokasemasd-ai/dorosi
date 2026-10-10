@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data.dart';
 import '../format.dart';
 import '../models.dart';
 import '../store.dart';
@@ -28,7 +29,8 @@ Future<void> showPaymentSheet(BuildContext context, Student student, String mont
           Text('تسجيل دفع: ${student.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text(
-            'شهر ${monthName(parseMonthKey(month), withYear: true)} · المستحق ${fmtMoney(bill.due, currency)}'
+            'شهر ${monthName(parseMonthKey(month), withYear: true)} · ${fmtMoney(bill.due, currency)}'
+            '${bill.previous > 0 ? ' · باقي من قبل كده ${fmtMoney(bill.previous, currency)}' : ''}'
             '${bill.paid > 0 ? ' · مدفوع ${fmtMoney(bill.paid, currency)}' : ''}',
             style: const TextStyle(color: AppColors.muted),
           ),
@@ -36,9 +38,7 @@ Future<void> showPaymentSheet(BuildContext context, Student student, String mont
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                line.group.payType == PayType.perLesson
-                    ? '• ${line.group.name}: ${lessonsCount(line.count)} × ${fmtMoney(line.price, currency)}'
-                    : '• ${line.group.name}: ${fmtMoney(line.price, currency)} شهريًا',
+                '• ${billLineText(line, currency)}',
                 style: const TextStyle(color: AppColors.muted, fontSize: 13),
               ),
             ),
@@ -75,3 +75,10 @@ Future<void> showPaymentSheet(BuildContext context, Student student, String mont
 }
 
 String _plain(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+
+/// "Ahmed maths (3 lessons · 4 hours × 100)" or "Group (monthly)".
+String billLineText(BillLine l, String currency) {
+  if (l.group.payType != PayType.perLesson) return '${l.group.name}: ${fmtMoney(l.price, currency)} شهريًا';
+  final hours = l.hours == l.count ? '' : ' · ${hoursCount(l.hours)}';
+  return '${l.group.name}: ${lessonsCount(l.count)}$hours × ${fmtMoney(l.price, currency)} للساعة';
+}

@@ -28,7 +28,7 @@ Group _group(
 
 void main() {
   // October 2026: Saturdays are 3, 10, 17, 24, 31.
-  final s = Student(id: 's1', name: 'أحمد', joinedAt: DateTime(2026, 1, 1));
+  final s = Student(id: 's1', name: 'أحمد', joinedAt: DateTime(2026, 10, 1));
 
   group('billing', () {
     test('monthly class bills the month price once', () {
@@ -99,9 +99,10 @@ void main() {
         students: ['s1'],
       );
       g.setPrice(350, now: DateTime(2026, 10, 5));
-      final d = AppData(students: [s], groups: [g]);
-      expect(d.billFor(s, '2026-09', DateTime(2026, 10, 10)).due, 300);
-      expect(d.billFor(s, '2026-10', DateTime(2026, 10, 10)).due, 350);
+      final old = Student(id: 's1', name: 'أحمد', joinedAt: DateTime(2026, 1, 1));
+      final d = AppData(students: [old], groups: [g]);
+      expect(d.billFor(old, '2026-09', DateTime(2026, 10, 10)).due, 300);
+      expect(d.billFor(old, '2026-10', DateTime(2026, 10, 10)).due, 350);
     });
 
     test('a student special price beats the class price', () {
@@ -133,8 +134,8 @@ void main() {
         PayType.perLesson,
         200,
         sessions: [
-          DatedSession(date: DateTime(2026, 10, 12), startMin: 20 * 60, durationMin: 120),
-          DatedSession(date: DateTime(2026, 10, 14), startMin: 20 * 60, durationMin: 120),
+          DatedSession(date: DateTime(2026, 10, 12), startMin: 20 * 60, durationMin: 60),
+          DatedSession(date: DateTime(2026, 10, 14), startMin: 20 * 60, durationMin: 60),
         ],
         students: ['s1'],
       );
@@ -278,5 +279,47 @@ void main() {
     expect(all.where((l) => !l.cancelled).length, 4);
     await store.removeExtraLesson(tue13.last);
     expect(store.data.lessonsOn(DateTime(2026, 10, 13)).length, 1);
+  });
+
+  test('a two-hour lesson costs double', () {
+    final g = _group(
+      'g',
+      PayType.perLesson,
+      100,
+      slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 17 * 60, durationMin: 120)],
+      students: ['s1'],
+    );
+    final d = AppData(students: [s], groups: [g]);
+    // Oct 3 and Oct 10, two hours each.
+    final bill = d.billFor(s, '2026-10', DateTime(2026, 10, 10, 23));
+    expect(bill.lines.single.count, 2);
+    expect(bill.lines.single.hours, 4);
+    expect(bill.due, 400);
+  });
+
+  test('the bill carries what is left from earlier months', () {
+    final joined = Student(id: 's1', name: 'أحمد', joinedAt: DateTime(2026, 8, 1));
+    final g = _group(
+      'g',
+      PayType.monthly,
+      400,
+      slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 17 * 60, durationMin: 60)],
+      students: ['s1'],
+    );
+    final d = AppData(students: [joined], groups: [g]);
+    d.payments.add(Payment(id: 'a', studentId: 's1', month: '2026-08', amount: 400));
+    d.payments.add(Payment(id: 'b', studentId: 's1', month: '2026-09', amount: 150));
+    var bill = d.billFor(joined, '2026-10', DateTime(2026, 10, 10));
+    expect(bill.due, 400);
+    expect(bill.previous, 250);
+    expect(bill.previousMonths, {'2026-09': 250});
+    expect(bill.remaining, 650);
+    expect(bill.status, PayStatus.unpaid);
+    // Paying everything now clears both months.
+    d.payments.add(Payment(id: 'c', studentId: 's1', month: '2026-10', amount: 650));
+    bill = d.billFor(joined, '2026-10', DateTime(2026, 10, 10));
+    expect(bill.remaining, 0);
+    expect(bill.status, PayStatus.paid);
+    expect(d.billFor(joined, '2026-11', DateTime(2026, 11, 10)).previous, 0);
   });
 }

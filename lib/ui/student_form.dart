@@ -195,7 +195,7 @@ class _StudentFormState extends State<StudentForm> {
                         onChanged: (v) => setState(() => v == true ? _groups.add(g.id) : _groups.remove(g.id)),
                         title: Text(g.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text(
-                          '${scheduleSummary(g)}\n${fmtMoney(g.currentPrice, currency)} ${g.payType == PayType.perLesson ? 'للحصة' : 'في الشهر'}',
+                          '${scheduleSummary(g)}\n${fmtMoney(g.currentPrice, currency)} ${g.payType == PayType.perLesson ? 'للساعة' : 'في الشهر'}',
                         ),
                         isThreeLine: true,
                       ),

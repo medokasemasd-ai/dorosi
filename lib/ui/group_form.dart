@@ -58,7 +58,7 @@ class _GroupFormState extends State<GroupForm> {
   late DateTime _start = _orig?.createdAt ?? DateTime(DateTime.now().year, DateTime.now().month);
   late final List<WeeklySlot> _slots =
       _orig?.slots.map((e) => e.copy()).toList() ??
-      [WeeklySlot(weekday: widget.weekday ?? DateTime.saturday, startMin: 16 * 60, durationMin: 90)];
+      [WeeklySlot(weekday: widget.weekday ?? DateTime.saturday, startMin: 16 * 60, durationMin: 60)];
   late final List<DatedSession> _sessions = _orig?.sessions.map((e) => e.copy()).toList() ?? [];
   late final Set<String> _students = {...?_orig?.studentIds};
 
@@ -190,9 +190,13 @@ class _GroupFormState extends State<GroupForm> {
               controller: _price,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
-                labelText: _pay == PayType.monthly ? 'السعر في الشهر' : 'سعر الحصة',
+                labelText: _pay == PayType.monthly ? 'السعر في الشهر' : 'سعر الحصة (الساعة)',
                 suffixText: currency,
-                helperText: _orig == null ? null : 'لو غيرت السعر، الشهور اللي فاتت هتفضل بالسعر القديم',
+                helperText: [
+                  if (_pay == PayType.perLesson) 'الحصة اللي مدتها ساعتين بتتحسب بضعف السعر',
+                  if (_orig != null) 'لو غيرت السعر، الشهور اللي فاتت هتفضل بالسعر القديم',
+                ].join('\n'),
+                helperMaxLines: 2,
               ),
               validator: (v) => parseArNum(v ?? '') == null ? 'اكتب السعر' : null,
             ),
@@ -324,7 +328,7 @@ class _GroupFormState extends State<GroupForm> {
       DatedSession(
         date: DateTime(base.year, base.month, base.day + (last == null ? 1 : 1)),
         startMin: last?.startMin ?? 16 * 60,
-        durationMin: last?.durationMin ?? 120,
+        durationMin: last?.durationMin ?? 60,
       ),
     );
   }

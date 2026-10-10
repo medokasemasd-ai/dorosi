@@ -140,6 +140,11 @@ String plural(int n, String one, String two, String few, String many) {
 
 String studentsCount(int n) => n == 0 ? 'بدون طلاب' : plural(n, 'طالب واحد', 'طالبين', 'طلاب', 'طالب');
 
+String hoursCount(double h) {
+  if (h != h.roundToDouble()) return '${arNum(h)} ساعة';
+  return plural(h.toInt(), 'ساعة', 'ساعتين', 'ساعات', 'ساعة');
+}
+
 String lessonsCount(int n) => n == 0 ? 'لا حصص' : plural(n, 'حصة واحدة', 'حصتين', 'حصص', 'حصة');
 
 /// Converts Arabic-Indic digits to Western ones (for phone numbers and links).

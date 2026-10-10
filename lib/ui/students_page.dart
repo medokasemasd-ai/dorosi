@@ -41,7 +41,7 @@ class _StudentsPageState extends State<StudentsPage> {
     final billed = rows.where((r) => r.bill.status != PayStatus.none && !r.student.archived).toList();
     final paidCount = billed.where((r) => r.bill.status == PayStatus.paid).length;
     final unpaidCount = billed.length - paidCount;
-    final totalDue = billed.fold<double>(0, (a, r) => a + r.bill.due);
+    final totalDue = billed.fold<double>(0, (a, r) => a + (r.bill.totalDue < 0 ? 0 : r.bill.totalDue));
     final totalPaid = rows.fold<double>(0, (a, r) => a + r.bill.paid);
 
     var shown = rows.where((r) {

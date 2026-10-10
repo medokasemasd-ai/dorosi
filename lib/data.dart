@@ -142,8 +142,31 @@ class AppData {
 
   // ---- billing ----
 
-  /// What [s] owes and has paid for [month] (yyyy-MM), as of [today].
+  /// What [s] owes and has paid for [month] (yyyy-MM), as of [today], plus
+  /// whatever is still unpaid from earlier months.
   MonthBill billFor(Student s, String month, DateTime today) {
+    final bill = _monthBill(s, month, today);
+    final first = parseMonthKey(month);
+    if (first.isAfter(dateOnly(today))) return bill;
+    var m = DateTime(s.joinedAt.year, s.joinedAt.month);
+    // Payments for earlier months count too, even ones recorded before joining.
+    final earlierPayments = payments
+        .where((p) => p.studentId == s.id && p.month.compareTo(month) < 0)
+        .fold<double>(0, (a, p) => a + p.amount);
+    var earlierDue = 0.0;
+    final owed = <String, double>{};
+    for (; m.isBefore(first); m = DateTime(m.year, m.month + 1)) {
+      final b = _monthBill(s, monthKey(m), today);
+      earlierDue += b.due;
+      if (b.due - b.paid > 0) owed[monthKey(m)] = b.due - b.paid;
+    }
+    bill.previous = earlierDue - earlierPayments;
+    if (bill.previous > 0) bill.previousMonths = owed;
+    return bill;
+  }
+
+  /// One month on its own, without earlier months.
+  MonthBill _monthBill(Student s, String month, DateTime today) {
     final first = parseMonthKey(month);
     final last = DateTime(first.year, first.month + 1, 0);
     final todayD = dateOnly(today);
@@ -154,6 +177,7 @@ class AppData {
     if (!isFutureMonth && mine.isNotEmpty && !dateOnly(s.joinedAt).isAfter(last)) {
       final ids = {for (final g in mine) g.id};
       final count = <String, int>{};
+      final hours = <String, double>{};
       final anyInMonth = <String>{};
       for (var d = first; !d.isAfter(last); d = DateTime(d.year, d.month, d.day + 1)) {
         for (final l in lessonsOn(d, forBilling: true)) {
@@ -163,6 +187,7 @@ class AppData {
           if (d.isAfter(todayD) || d.isBefore(dateOnly(s.joinedAt))) continue;
           if (isAbsent(l, s.id)) continue;
           count[l.group.id] = (count[l.group.id] ?? 0) + 1;
+          hours[l.group.id] = (hours[l.group.id] ?? 0) + l.hours;
         }
       }
       for (final g in mine) {
@@ -171,7 +196,8 @@ class AppData {
           if (anyInMonth.contains(g.id)) lines.add(BillLine(g, price, 1, price));
         } else {
           final n = count[g.id] ?? 0;
-          if (n > 0) lines.add(BillLine(g, price, n, price * n));
+          final h = hours[g.id] ?? 0;
+          if (n > 0) lines.add(BillLine(g, price, n, price * h, hours: h));
         }
       }
     }
@@ -197,10 +223,13 @@ class Lesson {
   DateTime get start => DateTime(date.year, date.month, date.day, 0, startMin);
   DateTime get end => DateTime(date.year, date.month, date.day, 0, startMin + durationMin);
   String get key => '${group.id}|${dateKey(date)}|$startMin';
+
+  /// A lesson is one hour; a two-hour lesson counts as two.
+  double get hours => durationMin / 60;
 }
 
 class BillLine {
-  BillLine(this.group, this.price, this.count, this.amount);
+  BillLine(this.group, this.price, this.count, this.amount, {this.hours = 0});
 
   final Group group;
   final double price;
@@ -208,6 +237,9 @@ class BillLine {
   /// Number of lessons for per-lesson classes, 1 for monthly ones.
   final int count;
   final double amount;
+
+  /// Hours taught for per-lesson classes; the price is per hour.
+  final double hours;
 }
 
 enum PayStatus { none, paid, partial, unpaid }
@@ -218,12 +250,22 @@ class MonthBill {
   final List<BillLine> lines;
   final double paid;
 
+  /// Still owed from earlier months (negative when paid ahead).
+  double previous = 0;
+
+  /// The earlier months with something unpaid, and how much.
+  Map<String, double> previousMonths = {};
+
+  /// This month only.
   double get due => lines.fold<double>(0, (a, l) => a + l.amount);
-  double get remaining => (due - paid) < 0 ? 0 : due - paid;
+
+  /// This month plus anything left from earlier months.
+  double get totalDue => due + previous;
+  double get remaining => (totalDue - paid) < 0 ? 0 : totalDue - paid;
 
   PayStatus get status {
-    if (due <= 0) return paid > 0 ? PayStatus.paid : PayStatus.none;
-    if (paid >= due) return PayStatus.paid;
+    if (totalDue <= 0) return paid > 0 || due > 0 ? PayStatus.paid : PayStatus.none;
+    if (paid >= totalDue) return PayStatus.paid;
     if (paid > 0) return PayStatus.partial;
     return PayStatus.unpaid;
   }

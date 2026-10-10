@@ -59,18 +59,20 @@ void main() {
   testWidgets('student page shows the month lessons week by week', (t) async {
     final store = await _open(t);
     final now = DateTime.now();
-    store.data.groups.add(Group(
-      id: 'g',
-      name: 'أحمد رياضيات',
-      kind: GroupKind.individual,
-      prices: [PriceChange(fromMonth: '0000-00', amount: 300)],
-      slots: [
-        WeeklySlot(weekday: DateTime.saturday, startMin: 17 * 60, durationMin: 60),
-        WeeklySlot(weekday: DateTime.tuesday, startMin: 17 * 60, durationMin: 60),
-      ],
-      studentIds: ['s1'],
-      createdAt: DateTime(now.year, now.month),
-    ));
+    store.data.groups.add(
+      Group(
+        id: 'g',
+        name: 'أحمد رياضيات',
+        kind: GroupKind.individual,
+        prices: [PriceChange(fromMonth: '0000-00', amount: 300)],
+        slots: [
+          WeeklySlot(weekday: DateTime.saturday, startMin: 17 * 60, durationMin: 60),
+          WeeklySlot(weekday: DateTime.tuesday, startMin: 17 * 60, durationMin: 60),
+        ],
+        studentIds: ['s1'],
+        createdAt: DateTime(now.year, now.month),
+      ),
+    );
     await store.saveGroup(store.data.groups.single);
     await t.tap(find.text('الطلاب'));
     await t.pumpAndSettle();
