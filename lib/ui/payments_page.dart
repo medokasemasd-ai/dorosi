@@ -13,7 +13,7 @@ import 'theme.dart';
 
 enum _Show { owing, all, paid }
 
-/// Who paid what and who still owes, for one month, with the old balances added in.
+/// Who paid what and who still owes, counted in lessons since each student joined.
 class PaymentsPage extends StatefulWidget {
   const PaymentsPage({super.key});
 
@@ -25,11 +25,10 @@ class _Row {
   _Row(this.student, this.bill);
 
   final Student student;
-  final MonthBill bill;
+  final Account bill;
 }
 
 class _PaymentsPageState extends State<PaymentsPage> {
-  DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   _Show _show = _Show.owing;
 
   @override
@@ -37,13 +36,11 @@ class _PaymentsPageState extends State<PaymentsPage> {
     final store = StoreScope.of(context);
     final d = store.data;
     final now = DateTime.now();
-    final month = monthKey(_month);
     final currency = d.settings.currency;
 
-    final all = [
-      for (final s in d.students)
-        if (!s.archived || d.billFor(s, month, now).remaining > 0) _Row(s, d.billFor(s, month, now)),
-    ].where((r) => r.bill.status != PayStatus.none || r.bill.paid > 0).toList();
+    final all = [for (final s in d.students) _Row(s, d.accountFor(s, now))]
+        .where((r) => r.bill.remaining > 0 || (!r.student.archived && r.bill.status != PayStatus.none))
+        .toList();
     final owing = all.where((r) => r.bill.remaining > 0).toList();
     final rows =
         switch (_show) {
@@ -55,30 +52,16 @@ class _PaymentsPageState extends State<PaymentsPage> {
           return c != 0 ? c : a.student.name.compareTo(b.student.name);
         });
 
-    double sum(Iterable<_Row> rs, double Function(MonthBill b) f) => rs.fold<double>(0, (a, r) => a + f(r.bill));
-    final monthDue = sum(all, (b) => b.due);
-    final oldDue = sum(all, (b) => b.previous > 0 ? b.previous : 0);
-    final paid = sum(all, (b) => b.paid);
+    double sum(Iterable<_Row> rs, double Function(Account b) f) => rs.fold<double>(0, (a, r) => a + f(r.bill));
     final remaining = sum(all, (b) => b.remaining);
+    final unpaidLessons = sum(all, (b) => b.lessonsUnpaid);
+    final thisMonth = monthKey(now);
+    final paidThisMonth = d.payments
+        .where((p) => monthKey(p.paidAt) == thisMonth)
+        .fold<double>(0, (a, p) => a + p.amount);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('الدفع'),
-        actions: [
-          IconButton(
-            tooltip: 'الشهر السابق',
-            onPressed: () => setState(() => _month = DateTime(_month.year, _month.month - 1)),
-            icon: const Icon(Icons.chevron_left),
-          ),
-          Text(monthName(_month, withYear: true), style: const TextStyle(fontWeight: FontWeight.w600)),
-          IconButton(
-            tooltip: 'الشهر التالي',
-            onPressed: () => setState(() => _month = DateTime(_month.year, _month.month + 1)),
-            icon: const Icon(Icons.chevron_right),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
+      appBar: AppBar(title: const Text('الدفع')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
@@ -101,9 +84,8 @@ class _PaymentsPageState extends State<PaymentsPage> {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    Expanded(child: _Figure('مستحق ${monthName(_month)}', fmtMoney(monthDue, currency))),
-                    Expanded(child: _Figure('من شهور قبل كده', fmtMoney(oldDue, currency))),
-                    Expanded(child: _Figure('اتدفع', fmtMoney(paid, currency))),
+                    Expanded(child: _Figure('حصص لسه مدفوعتش', unitsCount(unpaidLessons))),
+                    Expanded(child: _Figure('اتدفع ${monthName(now)}', fmtMoney(paidThisMonth, currency))),
                   ],
                 ),
               ],
@@ -149,7 +131,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Column(
               children: [
-                const _TableRow(header: true, name: 'الطالب', due: 'المستحق', paid: 'المدفوع', left: 'الباقي'),
+                const _TableRow(header: true, name: 'الطالب', due: 'اتدفع', paid: 'لسه (حصص)', left: 'الباقي'),
                 const Divider(height: 1),
                 if (rows.isEmpty)
                   Padding(
@@ -161,12 +143,12 @@ class _PaymentsPageState extends State<PaymentsPage> {
                   ),
                 for (final r in rows)
                   InkWell(
-                    onTap: () => _actions(r, month, currency),
+                    onTap: () => _actions(r, currency),
                     child: _TableRow(
                       name: r.student.name,
                       note: _note(r.bill),
-                      due: arMoney(r.bill.totalDue < 0 ? 0 : r.bill.totalDue),
-                      paid: arMoney(r.bill.paid),
+                      due: arMoney(r.bill.paid),
+                      paid: _units(r.bill.lessonsUnpaid),
                       left: arMoney(r.bill.remaining),
                       leftColor: r.bill.remaining > 0 ? AppColors.unpaid : AppColors.paid,
                     ),
@@ -176,8 +158,8 @@ class _PaymentsPageState extends State<PaymentsPage> {
                   _TableRow(
                     header: true,
                     name: 'الإجمالي',
-                    due: arMoney(sum(rows, (b) => b.totalDue < 0 ? 0 : b.totalDue)),
-                    paid: arMoney(sum(rows, (b) => b.paid)),
+                    due: arMoney(sum(rows, (b) => b.paid)),
+                    paid: _units(sum(rows, (b) => b.lessonsUnpaid)),
                     left: arMoney(sum(rows, (b) => b.remaining)),
                     leftColor: AppColors.unpaid,
                   ),
@@ -192,7 +174,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
           ),
           const SizedBox(height: 20),
           const SectionTitle('الدخل في آخر ٦ شهور'),
-          _Income(month: _month, payments: d.payments, currency: currency),
+          _Income(month: DateTime(now.year, now.month), payments: d.payments, currency: currency),
           const SizedBox(height: 20),
           const SectionTitle('آخر المدفوعات'),
           _Recent(payments: d.payments, data: d, currency: currency),
@@ -201,18 +183,19 @@ class _PaymentsPageState extends State<PaymentsPage> {
     );
   }
 
-  /// Why the amount is what it is, under the student's name.
-  String? _note(MonthBill b) {
+  /// What the student has taken so far, under their name.
+  String? _note(Account b) {
     final parts = <String>[
-      for (final l in b.lines)
-        if (l.group.payType == PayType.perLesson) hoursCount(l.hours),
-      if (b.previous > 0) 'منه ${arMoney(b.previous)} قديم',
-      if (b.previous < 0) 'دافع مقدم ${arMoney(-b.previous)}',
+      if (b.lessonsTaken > 0) 'خد ${unitsCount(b.lessonsTaken)}',
+      if (b.unpaid.any((c) => c.month != null)) 'فيه شهري',
+      if (b.credit > 0) 'دافع مقدم ${arMoney(b.credit)}',
     ];
     return parts.isEmpty ? null : parts.join(' · ');
   }
 
-  Future<void> _actions(_Row r, String month, String currency) async {
+  String _units(double n) => n <= 0 ? '–' : arNum(double.parse(n.toStringAsFixed(1)));
+
+  Future<void> _actions(_Row r, String currency) async {
     final s = r.student;
     final v = await showModalBottomSheet<String>(
       context: context,
@@ -250,12 +233,12 @@ class _PaymentsPageState extends State<PaymentsPage> {
     if (!mounted) return;
     switch (v) {
       case 'pay':
-        await showPaymentSheet(context, s, month);
+        await showPaymentSheet(context, s);
       case 'whatsapp':
         final text =
             'السلام عليكم، تذكير بمصاريف دروس ${s.name}: '
-            'الباقي ${fmtMoney(r.bill.remaining, currency)}'
-            '${r.bill.previous > 0 ? ' (منهم ${fmtMoney(r.bill.previous, currency)} من شهور قبل كده)' : ''}. شكرًا';
+            '${r.bill.lessonsUnpaid > 0 ? '${unitsCount(r.bill.lessonsUnpaid)} لسه مدفوعتش، ' : ''}'
+            'الباقي ${fmtMoney(r.bill.remaining, currency)}. شكرًا';
         await launchUrl(
           Uri.parse('https://wa.me/${whatsappNumber(s.phone)}?text=${Uri.encodeComponent(text)}'),
           mode: LaunchMode.externalApplication,
@@ -268,8 +251,10 @@ class _PaymentsPageState extends State<PaymentsPage> {
   Future<void> _shareReport(List<_Row> owing, String currency) async {
     final total = owing.fold<double>(0, (a, r) => a + r.bill.remaining);
     final lines = [
-      'الباقي على الطلاب (${monthName(_month, withYear: true)})',
-      for (final r in owing) '• ${r.student.name}: ${fmtMoney(r.bill.remaining, currency)}',
+      'الباقي على الطلاب (${fmtDate(DateTime.now())})',
+      for (final r in owing)
+        '• ${r.student.name}: ${fmtMoney(r.bill.remaining, currency)}'
+            '${r.bill.lessonsUnpaid > 0 ? ' (${unitsCount(r.bill.lessonsUnpaid)})' : ''}',
       'الإجمالي: ${fmtMoney(total, currency)}',
     ];
     await SharePlus.instance.share(ShareParams(text: lines.join('\n')));
@@ -373,7 +358,8 @@ class _Income extends StatelessWidget {
   Widget build(BuildContext context) {
     final months = [for (var i = 5; i >= 0; i--) DateTime(month.year, month.month - i)];
     final totals = {
-      for (final m in months) m: payments.where((p) => p.month == monthKey(m)).fold<double>(0, (a, p) => a + p.amount),
+      for (final m in months)
+        m: payments.where((p) => monthKey(p.paidAt) == monthKey(m)).fold<double>(0, (a, p) => a + p.amount),
     };
     final top = totals.values.fold<double>(0, (a, b) => a > b ? a : b);
     return Panel(
@@ -436,7 +422,7 @@ class _Recent extends StatelessWidget {
               dense: true,
               title: Text(data.student(p.studentId)?.name ?? 'طالب محذوف'),
               subtitle: Text(
-                '${fmtShortDate(p.paidAt)} · عن ${monthName(parseMonthKey(p.month))}'
+                '${weekdayName(p.paidAt.weekday)} ${fmtShortDate(p.paidAt)}'
                 '${p.note.isNotEmpty ? ' · ${p.note}' : ''}',
               ),
               trailing: Text(

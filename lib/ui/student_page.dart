@@ -23,6 +23,7 @@ class StudentPage extends StatefulWidget {
 
 class _StudentPageState extends State<StudentPage> {
   DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
+  bool _showAll = false;
 
   @override
   Widget build(BuildContext context) {
@@ -31,8 +32,8 @@ class _StudentPageState extends State<StudentPage> {
     final s = d.student(widget.studentId);
     if (s == null) return const Scaffold(body: SizedBox());
     final currency = d.settings.currency;
-    final month = monthKey(_month);
-    final bill = d.billFor(s, month, DateTime.now());
+    final account = d.accountFor(s, DateTime.now());
+    final unpaid = account.unpaid.reversed.toList();
     final groups = d.groupsOf(s);
     final siblings = d.siblingsOf(s);
     final payments = d.payments.where((p) => p.studentId == s.id).toList()
@@ -105,8 +106,73 @@ class _StudentPageState extends State<StudentPage> {
             ),
           ),
           const SizedBox(height: 16),
+          const SectionTitle('الحساب'),
+          Panel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: _Count('اتاخد', unitsCount(account.lessonsTaken), AppColors.ink)),
+                    Expanded(child: _Count('اتدفع', unitsCount(account.lessonsPaid), AppColors.paid)),
+                    Expanded(
+                      child: _Count(
+                        'لسه',
+                        unitsCount(account.lessonsUnpaid),
+                        account.lessonsUnpaid > 0 ? AppColors.unpaid : AppColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                _line('المطلوب كله', fmtMoney(account.due, currency)),
+                _line('المدفوع', fmtMoney(account.paid, currency), color: AppColors.paid),
+                _line(
+                  account.credit > 0 ? 'دافع مقدم' : 'الباقي عليه',
+                  fmtMoney(account.credit > 0 ? account.credit : account.remaining, currency),
+                  color: account.remaining > 0 ? AppColors.unpaid : AppColors.paid,
+                  bold: true,
+                ),
+                if (unpaid.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  const Text(
+                    'الحصص اللي لسه مدفوعتش',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+                  ),
+                  for (final c in unpaid.take(_showAll ? unpaid.length : 6))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(chargeText(c), style: const TextStyle(fontSize: 13))),
+                          Text(
+                            c.paid > 0 ? 'باقي ${fmtMoney(c.amount - c.paid, currency)}' : fmtMoney(c.amount, currency),
+                            style: const TextStyle(fontSize: 13, color: AppColors.unpaid, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (unpaid.length > 6 && !_showAll)
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton(
+                        onPressed: () => setState(() => _showAll = true),
+                        child: Text('عرض الكل (${arNum(unpaid.length)})'),
+                      ),
+                    ),
+                ],
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () => showPaymentSheet(context, s),
+                  icon: const Icon(Icons.payments_outlined),
+                  label: const Text('تسجيل دفع'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           SectionTitle(
-            'حساب الشهر',
+            'الحضور',
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -124,81 +190,6 @@ class _StudentPageState extends State<StudentPage> {
               ],
             ),
           ),
-          Panel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text('الحالة', style: TextStyle(color: AppColors.muted)),
-                    ),
-                    StatusPill(bill.status),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                if (bill.lines.isEmpty) const Text('مفيش مستحق في الشهر ده', style: TextStyle(color: AppColors.muted)),
-                for (final l in bill.lines)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      children: [
-                        Expanded(child: Text(billLineText(l, currency))),
-                        Text(fmtMoney(l.amount, currency), style: const TextStyle(fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
-                if (bill.previous > 0) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Text('باقي من الشهور اللي قبل كده', style: TextStyle(color: AppColors.unpaid)),
-                        ),
-                        Text(
-                          fmtMoney(bill.previous, currency),
-                          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.unpaid),
-                        ),
-                      ],
-                    ),
-                  ),
-                  for (final e in bill.previousMonths.entries)
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(start: 12, bottom: 4),
-                      child: Text(
-                        '${monthName(parseMonthKey(e.key), withYear: true)}: ${fmtMoney(e.value, currency)}',
-                        style: const TextStyle(fontSize: 13, color: AppColors.muted),
-                      ),
-                    ),
-                ],
-                if (bill.previous < 0)
-                  Text(
-                    'مدفوع مقدم من قبل كده: ${fmtMoney(-bill.previous, currency)}',
-                    style: const TextStyle(fontSize: 13, color: AppColors.paid),
-                  ),
-                const Divider(height: 20),
-                _line(
-                  bill.previous == 0 ? 'المستحق' : 'المستحق كله',
-                  fmtMoney(bill.totalDue < 0 ? 0 : bill.totalDue, currency),
-                ),
-                _line('المدفوع', fmtMoney(bill.paid, currency), color: AppColors.paid),
-                _line(
-                  'الباقي',
-                  fmtMoney(bill.remaining, currency),
-                  color: bill.remaining > 0 ? AppColors.unpaid : AppColors.ink,
-                  bold: true,
-                ),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: () => showPaymentSheet(context, s, month),
-                  icon: const Icon(Icons.payments_outlined),
-                  label: const Text('تسجيل دفع'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
           _LessonLog(student: s, month: _month),
           const SizedBox(height: 16),
           const SectionTitle('الحصص'),
@@ -244,7 +235,7 @@ class _StudentPageState extends State<StudentPage> {
                       Avatar(o.name, size: 36),
                       const SizedBox(width: 12),
                       Expanded(child: Text(o.stage.isEmpty ? o.name : '${o.name} · ${o.stage}')),
-                      StatusPill(d.billFor(o, month, DateTime.now()).status),
+                      StatusPill(d.accountFor(o, DateTime.now()).status),
                     ],
                   ),
                 ),
@@ -269,7 +260,7 @@ class _StudentPageState extends State<StudentPage> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(fmtMoney(p.amount, currency), style: const TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
-                        'عن شهر ${monthName(parseMonthKey(p.month), withYear: true)} · اتدفع ${fmtShortDate(p.paidAt)}'
+                        'اتدفع ${weekdayName(p.paidAt.weekday)} ${fmtShortDate(p.paidAt)}'
                         '${p.note.isNotEmpty ? ' · ${p.note}' : ''}',
                       ),
                       trailing: IconButton(
@@ -381,7 +372,6 @@ class _LessonLog extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionTitle('الحصص اللي اتاخدت'),
         Panel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -478,6 +468,28 @@ class _LessonLog extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _Count extends StatelessWidget {
+  const _Count(this.label, this.value, this.color);
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color),
+        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+      ],
     );
   }
 }

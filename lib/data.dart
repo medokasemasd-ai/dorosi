@@ -206,6 +206,89 @@ class AppData {
   }
 }
 
+// ---- running account ----
+
+extension Accounts on AppData {
+  /// Everything [s] has taken since joining and everything paid, with the
+  /// payments covering the oldest lessons first.
+  Account accountFor(Student s, DateTime now) {
+    final charges = <Charge>[];
+    final ids = {for (final g in groupsOf(s, includeArchived: true)) g.id};
+    final monthsCharged = <String>{};
+    final today = dateOnly(now);
+    for (var d = dateOnly(s.joinedAt); !d.isAfter(today); d = DateTime(d.year, d.month, d.day + 1)) {
+      for (final l in lessonsOn(d, forBilling: true)) {
+        if (!ids.contains(l.group.id) || l.cancelled) continue;
+        final g = l.group;
+        final month = monthKey(d);
+        final price = s.priceOverrides[g.id] ?? g.priceFor(month);
+        if (g.payType == PayType.monthly) {
+          // A monthly class is one charge for the month, from its first lesson.
+          if (monthsCharged.add('${g.id}|$month')) charges.add(Charge(g, d, price, month: month));
+          continue;
+        }
+        if (l.start.isAfter(now) || isAbsent(l, s.id)) continue;
+        charges.add(Charge(g, d, price * l.hours, lesson: l));
+      }
+    }
+    final paid = payments.where((p) => p.studentId == s.id).fold<double>(0, (a, p) => a + p.amount);
+    var left = paid;
+    for (final c in charges) {
+      final take = left < c.amount ? left : c.amount;
+      c.paid = take < 0 ? 0 : take;
+      left -= c.paid;
+    }
+    return Account(charges, paid);
+  }
+}
+
+/// One thing a student owes for: a lesson, or a month of a monthly class.
+class Charge {
+  Charge(this.group, this.date, this.amount, {this.lesson, this.month});
+
+  final Group group;
+  final DateTime date;
+  final double amount;
+  final Lesson? lesson;
+
+  /// Set for a month of a monthly class.
+  final String? month;
+
+  /// How much of it the payments cover.
+  double paid = 0;
+
+  bool get settled => paid >= amount - 0.001;
+
+  /// A lesson of two hours counts as two lessons.
+  double get units => lesson?.hours ?? 0;
+}
+
+class Account {
+  Account(this.charges, this.paid);
+
+  final List<Charge> charges;
+  final double paid;
+
+  double get due => charges.fold<double>(0, (a, c) => a + c.amount);
+  double get remaining => due - paid > 0 ? due - paid : 0;
+
+  /// Paid beyond what is owed so far.
+  double get credit => paid - due > 0 ? paid - due : 0;
+
+  Iterable<Charge> get lessons => charges.where((c) => c.lesson != null);
+  double get lessonsTaken => lessons.fold<double>(0, (a, c) => a + c.units);
+  double get lessonsPaid => lessons.where((c) => c.settled).fold<double>(0, (a, c) => a + c.units);
+  double get lessonsUnpaid => lessonsTaken - lessonsPaid;
+  List<Charge> get unpaid => charges.where((c) => !c.settled).toList();
+
+  PayStatus get status {
+    if (due <= 0) return paid > 0 ? PayStatus.paid : PayStatus.none;
+    if (paid >= due - 0.001) return PayStatus.paid;
+    if (paid > 0) return PayStatus.partial;
+    return PayStatus.unpaid;
+  }
+}
+
 String absenceKey(Lesson l, String studentId) => '${l.key}|$studentId';
 
 class Lesson {

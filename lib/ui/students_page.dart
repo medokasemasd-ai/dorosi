@@ -20,7 +20,6 @@ class StudentsPage extends StatefulWidget {
 }
 
 class _StudentsPageState extends State<StudentsPage> {
-  DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
   _Filter _filter = _Filter.all;
   bool _byFamily = false;
   String _q = '';
@@ -30,18 +29,17 @@ class _StudentsPageState extends State<StudentsPage> {
     final store = StoreScope.of(context);
     final d = store.data;
     final now = DateTime.now();
-    final month = monthKey(_month);
     final currency = d.settings.currency;
 
     final rows = <_Row>[];
     for (final s in d.students) {
       if (_filter == _Filter.archived ? !s.archived : s.archived) continue;
-      rows.add(_Row(s, d.billFor(s, month, now), d.groupsOf(s)));
+      rows.add(_Row(s, d.accountFor(s, now), d.groupsOf(s)));
     }
     final billed = rows.where((r) => r.bill.status != PayStatus.none && !r.student.archived).toList();
     final paidCount = billed.where((r) => r.bill.status == PayStatus.paid).length;
     final unpaidCount = billed.length - paidCount;
-    final totalDue = billed.fold<double>(0, (a, r) => a + (r.bill.totalDue < 0 ? 0 : r.bill.totalDue));
+    final totalDue = billed.fold<double>(0, (a, r) => a + r.bill.due);
     final totalPaid = rows.fold<double>(0, (a, r) => a + r.bill.paid);
 
     var shown = rows.where((r) {
@@ -61,23 +59,7 @@ class _StudentsPageState extends State<StudentsPage> {
     shown.sort((a, b) => a.student.name.compareTo(b.student.name));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('الطلاب'),
-        actions: [
-          IconButton(
-            tooltip: 'الشهر السابق',
-            onPressed: () => setState(() => _month = DateTime(_month.year, _month.month - 1)),
-            icon: const Icon(Icons.chevron_left),
-          ),
-          Text(monthName(_month, withYear: true), style: const TextStyle(fontWeight: FontWeight.w600)),
-          IconButton(
-            tooltip: 'الشهر التالي',
-            onPressed: () => setState(() => _month = DateTime(_month.year, _month.month + 1)),
-            icon: const Icon(Icons.chevron_right),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
+      appBar: AppBar(title: const Text('الطلاب')),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: null,
         onPressed: () => openStudentForm(context),
@@ -163,15 +145,15 @@ class _StudentsPageState extends State<StudentsPage> {
           else if (shown.isEmpty)
             const EmptyState(icon: Icons.filter_alt_off_outlined, text: 'مفيش طلاب بالشرط ده')
           else if (_byFamily)
-            ..._familySections(shown, currency, month)
+            ..._familySections(shown, currency)
           else
-            for (final r in shown) _tile(r, currency, month),
+            for (final r in shown) _tile(r, currency),
         ],
       ),
     );
   }
 
-  List<Widget> _familySections(List<_Row> rows, String currency, String month) {
+  List<Widget> _familySections(List<_Row> rows, String currency) {
     final families = <String, List<_Row>>{};
     for (final r in rows) {
       final f = r.student.family.trim();
@@ -205,12 +187,12 @@ class _StudentsPageState extends State<StudentsPage> {
             ],
           ),
         ),
-        for (final r in families[k]!) _tile(r, currency, month),
+        for (final r in families[k]!) _tile(r, currency),
       ],
     ];
   }
 
-  Widget _tile(_Row r, String currency, String month) {
+  Widget _tile(_Row r, String currency) {
     final s = r.student;
     final status = r.bill.status;
     final groups = r.groups.map((g) => g.name).join('، ');
@@ -237,7 +219,7 @@ class _StudentsPageState extends State<StudentsPage> {
                   ),
                   if (status == PayStatus.partial || status == PayStatus.unpaid)
                     Text(
-                      'الباقي ${fmtMoney(r.bill.remaining, currency)}',
+                      'عليه ${r.bill.lessonsUnpaid > 0 ? '${unitsCount(r.bill.lessonsUnpaid)} · ' : ''}${fmtMoney(r.bill.remaining, currency)}',
                       style: const TextStyle(fontSize: 12, color: AppColors.unpaid),
                     ),
                 ],
@@ -246,7 +228,7 @@ class _StudentsPageState extends State<StudentsPage> {
             const SizedBox(width: 8),
             if (status == PayStatus.unpaid || status == PayStatus.partial)
               TextButton(
-                onPressed: () => showPaymentSheet(context, s, month),
+                onPressed: () => showPaymentSheet(context, s),
                 style: TextButton.styleFrom(
                   backgroundColor: AppColors.unpaidSoft,
                   foregroundColor: AppColors.unpaid,
@@ -283,7 +265,7 @@ class _Row {
   _Row(this.student, this.bill, this.groups);
 
   final Student student;
-  final MonthBill bill;
+  final Account bill;
   final List<Group> groups;
 }
 

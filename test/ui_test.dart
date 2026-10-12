@@ -82,35 +82,35 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('أحمد'));
     await t.pumpAndSettle();
-    await t.scrollUntilVisible(find.text('الحصص اللي اتاخدت'), 200, scrollable: find.byType(Scrollable).last);
-    await t.ensureVisible(find.text('الحصص اللي اتاخدت'));
+    await t.scrollUntilVisible(find.text('الحضور'), 200, scrollable: find.byType(Scrollable).last);
+    await t.ensureVisible(find.text('الحضور'));
     await t.pumpAndSettle();
     expect(find.textContaining('أسبوع'), findsWidgets);
   });
 
-  testWidgets('payments tab lists who owes, with old months added', (t) async {
+  testWidgets('payments tab lists who owes in lessons', (t) async {
     final store = await _open(t);
     final now = DateTime.now();
-    store.data.students.single.joinedAt = DateTime(now.year, now.month - 1);
+    store.data.students.single.joinedAt = DateTime(now.year, now.month, now.day - 6);
     store.data.groups.add(
       Group(
         id: 'g',
         name: 'رياضيات',
-        prices: [PriceChange(fromMonth: '0000-00', amount: 300)],
+        payType: PayType.perLesson,
+        prices: [PriceChange(fromMonth: '0000-00', amount: 100)],
         slots: [for (var w = 1; w <= 7; w++) WeeklySlot(weekday: w, startMin: 0, durationMin: 60)],
         studentIds: ['s1'],
         createdAt: DateTime(now.year, now.month - 1),
       ),
     );
-    store.data.payments.add(
-      Payment(id: 'p', studentId: 's1', month: monthKey(DateTime(now.year, now.month - 1)), amount: 100),
-    );
+    store.data.payments.add(Payment(id: 'p', studentId: 's1', month: monthKey(now), amount: 300));
     await store.saveGroup(store.data.groups.single);
     await t.tap(find.text('الدفع'));
     await t.pumpAndSettle();
     expect(find.text('أحمد'), findsOneWidget);
-    // 200 left from last month plus 300 this month.
-    expect(find.text('٥٠٠'), findsWidgets);
+    // Seven lessons taken (six days ago up to today), three paid: four left, 400.
+    expect(find.text('٤٠٠'), findsWidgets);
+    expect(find.text('٤'), findsWidgets);
     await t.tap(find.text('أحمد'));
     await t.pumpAndSettle();
     expect(find.text('تسجيل دفع'), findsOneWidget);

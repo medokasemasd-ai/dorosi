@@ -322,4 +322,36 @@ void main() {
     expect(bill.status, PayStatus.paid);
     expect(d.billFor(joined, '2026-11', DateTime(2026, 11, 10)).previous, 0);
   });
+
+  test('the account counts lessons taken, paid and unpaid, oldest paid first', () {
+    // October 2026: Sat 3, Tue 6, Sat 10, Tue 13. Saturday is one hour, Tuesday two.
+    final g = _group(
+      'g',
+      PayType.perLesson,
+      100,
+      slots: [
+        WeeklySlot(weekday: DateTime.saturday, startMin: 17 * 60, durationMin: 60),
+        WeeklySlot(weekday: DateTime.tuesday, startMin: 17 * 60, durationMin: 120),
+      ],
+      students: ['s1'],
+    );
+    final d = AppData(students: [s], groups: [g]);
+    final now = DateTime(2026, 10, 13, 23);
+    var a = d.accountFor(s, now);
+    expect(a.lessonsTaken, 6);
+    expect(a.due, 600);
+    expect(a.status, PayStatus.unpaid);
+    // Paying 300 covers Sat 3 and Tue 6.
+    d.payments.add(Payment(id: 'p', studentId: 's1', month: '2026-10', amount: 300));
+    a = d.accountFor(s, now);
+    expect(a.lessonsPaid, 3);
+    expect(a.lessonsUnpaid, 3);
+    expect(a.remaining, 300);
+    expect(a.unpaid.map((c) => c.date.day), [10, 13]);
+    // An absence is not charged; a future lesson is not charged yet.
+    d.absences.add(absenceKey(d.lessonsOn(DateTime(2026, 10, 13)).single, 's1'));
+    a = d.accountFor(s, now);
+    expect(a.remaining, 100);
+    expect(d.accountFor(s, DateTime(2026, 10, 2)).due, 0);
+  });
 }

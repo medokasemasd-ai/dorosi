@@ -7,13 +7,18 @@ import '../store.dart';
 import 'common.dart';
 import 'theme.dart';
 
-/// Asks for an amount and records a payment by [student] for [month].
-Future<void> showPaymentSheet(BuildContext context, Student student, String month) async {
+/// Asks for an amount and records a payment by [student]. Payments cover the
+/// oldest unpaid lessons first.
+Future<void> showPaymentSheet(BuildContext context, Student student) async {
   final store = StoreScope.read(context);
-  final bill = store.data.billFor(student, month, DateTime.now());
-  final amount = TextEditingController(text: bill.remaining > 0 ? _plain(bill.remaining) : '');
+  final now = DateTime.now();
+  final account = store.data.accountFor(student, now);
+  final amount = TextEditingController(text: account.remaining > 0 ? _plain(account.remaining) : '');
   final note = TextEditingController();
   final currency = store.data.settings.currency;
+  // Per-lesson price of the student's first per-lesson class, for the quick buttons.
+  final perLesson = store.data.groupsOf(student).where((g) => g.payType == PayType.perLesson).toList();
+  final price = perLesson.isEmpty ? null : (student.priceOverrides[perLesson.first.id] ?? perLesson.first.currentPrice);
 
   final saved = await showModalBottomSheet<bool>(
     context: context,
@@ -29,19 +34,14 @@ Future<void> showPaymentSheet(BuildContext context, Student student, String mont
           Text('تسجيل دفع: ${student.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text(
-            'شهر ${monthName(parseMonthKey(month), withYear: true)} · ${fmtMoney(bill.due, currency)}'
-            '${bill.previous > 0 ? ' · باقي من قبل كده ${fmtMoney(bill.previous, currency)}' : ''}'
-            '${bill.paid > 0 ? ' · مدفوع ${fmtMoney(bill.paid, currency)}' : ''}',
-            style: const TextStyle(color: AppColors.muted),
+            account.remaining > 0
+                ? 'عليه ${fmtMoney(account.remaining, currency)}'
+                      '${account.lessonsUnpaid > 0 ? ' (${unitsCount(account.lessonsUnpaid)} لسه مدفوعتش)' : ''}'
+                : account.credit > 0
+                ? 'دافع مقدم ${fmtMoney(account.credit, currency)}'
+                : 'مفيش عليه حاجة',
+            style: TextStyle(color: account.remaining > 0 ? AppColors.unpaid : AppColors.muted),
           ),
-          for (final line in bill.lines)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '• ${billLineText(line, currency)}',
-                style: const TextStyle(color: AppColors.muted, fontSize: 13),
-              ),
-            ),
           const SizedBox(height: 16),
           TextField(
             controller: amount,
@@ -49,6 +49,27 @@ Future<void> showPaymentSheet(BuildContext context, Student student, String mont
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(labelText: 'المبلغ', suffixText: currency),
           ),
+          if (price != null && price > 0) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final n in [1, 2, 4, 8])
+                  ActionChip(
+                    label: Text(lessonsCount(n)),
+                    onPressed: () => amount.text = _plain(price * n),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                if (account.remaining > 0)
+                  ActionChip(
+                    label: const Text('كل اللي عليه'),
+                    onPressed: () => amount.text = _plain(account.remaining),
+                    visualDensity: VisualDensity.compact,
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           TextField(
             controller: note,
@@ -62,7 +83,7 @@ Future<void> showPaymentSheet(BuildContext context, Student student, String mont
                 toast(c, 'اكتب المبلغ صح');
                 return;
               }
-              store.addPayment(student.id, month, v, note: note.text.trim());
+              store.addPayment(student.id, monthKey(now), v, note: note.text.trim());
               Navigator.pop(c, true);
             },
             child: const Text('حفظ'),
@@ -74,11 +95,16 @@ Future<void> showPaymentSheet(BuildContext context, Student student, String mont
   if (saved == true && context.mounted) toast(context, 'تم تسجيل الدفع');
 }
 
-String _plain(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+/// "3 lessons", where a two-hour lesson counts as two.
+String unitsCount(double n) =>
+    n == n.roundToDouble() ? lessonsCount(n.toInt()) : '${arNum(double.parse(n.toStringAsFixed(1)))} حصة';
 
-/// "Ahmed maths (3 lessons · 4 hours × 100)" or "Group (monthly)".
-String billLineText(BillLine l, String currency) {
-  if (l.group.payType != PayType.perLesson) return '${l.group.name}: ${fmtMoney(l.price, currency)} شهريًا';
-  final hours = l.hours == l.count ? '' : ' · ${hoursCount(l.hours)}';
-  return '${l.group.name}: ${lessonsCount(l.count)}$hours × ${fmtMoney(l.price, currency)} للساعة';
+/// What one charge is: "السبت ١٠ أكتوبر · رياضيات (ساعتين)" or "رياضيات · شهر أكتوبر".
+String chargeText(Charge c) {
+  if (c.lesson == null) return '${c.group.name} · شهر ${monthName(c.date)}';
+  final h = c.lesson!.hours;
+  return '${weekdayName(c.date.weekday)} ${fmtShortDate(c.date)} · ${c.group.name}'
+      '${h == 1 ? '' : ' (${hoursCount(h)})'}';
 }
+
+String _plain(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);

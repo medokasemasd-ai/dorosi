@@ -66,7 +66,6 @@ class LessonCard extends StatelessWidget {
     final g = l.group;
     final now = DateTime.now();
     final members = d.studentsOf(g);
-    final month = monthKey(l.date);
     final happened = !l.start.isAfter(now);
     final upcoming = d.nextLesson(now)?.key == l.key;
 
@@ -166,7 +165,7 @@ class LessonCard extends StatelessWidget {
           for (final s in members)
             _StudentRow(
               student: s,
-              status: d.billFor(s, month, now).status,
+              status: d.accountFor(s, now).status,
               absent: d.isAbsent(l, s.id),
               showAttendance: happened && !l.cancelled,
               onToggleAbsent: () => store.toggleAbsent(l, s.id),
