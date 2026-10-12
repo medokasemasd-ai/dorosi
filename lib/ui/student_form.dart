@@ -88,6 +88,7 @@ class _StudentFormState extends State<StudentForm> {
   late DateTime _joined = widget.student?.joinedAt ?? DateTime(DateTime.now().year, DateTime.now().month);
   final Set<String> _groups = {};
   final Map<String, TextEditingController> _prices = {};
+  final Map<String, TextEditingController> _hours = {};
   bool _init = false;
 
   @override
@@ -100,6 +101,7 @@ class _StudentFormState extends State<StudentForm> {
     if (s != null) {
       _groups.addAll(d.groupsOf(s, includeArchived: true).map((g) => g.id));
       s.priceOverrides.forEach((gid, p) => _prices[gid] = TextEditingController(text: _plain(p)));
+      s.hoursOverrides.forEach((gid, h) => _hours[gid] = TextEditingController(text: _plain(h)));
     } else if (widget.groupId != null) {
       _groups.add(widget.groupId!);
     }
@@ -199,6 +201,21 @@ class _StudentFormState extends State<StudentForm> {
                         ),
                         isThreeLine: true,
                       ),
+                      if (_groups.contains(g.id) && g.payType == PayType.perLesson && _longest(g) > 60)
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(start: 12, bottom: 8),
+                          child: TextField(
+                            controller: _hours.putIfAbsent(g.id, () => TextEditingController()),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              labelText: 'ساعات الطالب ده في الحصة (اختياري)',
+                              hintText: 'مثلًا ١ لو الحصة لكذا أخ وكل واحد ساعة',
+                              helperText: 'لو فاضية بيتحسب مدة الحصة كلها (${fmtDuration(_longest(g))})',
+                              suffixText: 'ساعة',
+                            ),
+                          ),
+                        ),
                       if (_groups.contains(g.id))
                         Padding(
                           padding: const EdgeInsetsDirectional.only(start: 12, bottom: 8),
@@ -241,9 +258,12 @@ class _StudentFormState extends State<StudentForm> {
       ..notes = _notes.text.trim()
       ..joinedAt = dateOnly(_joined);
     s.priceOverrides.clear();
+    s.hoursOverrides.clear();
     for (final gid in _groups) {
       final v = parseArNum(_prices[gid]?.text ?? '');
       if (v != null && v >= 0) s.priceOverrides[gid] = v;
+      final h = parseArNum(_hours[gid]?.text ?? '');
+      if (h != null && h > 0) s.hoursOverrides[gid] = h;
     }
     await store.saveStudent(s, _groups);
     if (mounted) Navigator.pop(context);
@@ -288,5 +308,11 @@ class _Suggest extends StatelessWidget {
     );
   }
 }
+
+/// The longest lesson of [g], in minutes.
+int _longest(Group g) => [
+  for (final s in g.slots) s.durationMin,
+  for (final s in g.sessions) s.durationMin,
+].fold(0, (a, b) => a > b ? a : b);
 
 String _plain(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);

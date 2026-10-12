@@ -163,9 +163,11 @@ class Student {
     this.family = '',
     this.notes = '',
     Map<String, double>? priceOverrides,
+    Map<String, double>? hoursOverrides,
     this.archived = false,
     DateTime? joinedAt,
   }) : priceOverrides = priceOverrides ?? {},
+       hoursOverrides = hoursOverrides ?? {},
        joinedAt = joinedAt ?? dateOnly(DateTime.now());
 
   String id;
@@ -179,6 +181,10 @@ class Student {
 
   /// Special price for this student in a given group (e.g. a sibling discount).
   Map<String, double> priceOverrides;
+
+  /// Hours this student is taught in a given group, when shorter than the
+  /// lesson (e.g. three siblings sharing a three-hour lesson, one hour each).
+  Map<String, double> hoursOverrides;
   bool archived;
   DateTime joinedAt;
 
@@ -190,6 +196,7 @@ class Student {
     'family': family,
     'notes': notes,
     'priceOverrides': priceOverrides,
+    'hoursOverrides': hoursOverrides,
     'archived': archived,
     'joinedAt': dateKey(joinedAt),
   };
@@ -202,6 +209,7 @@ class Student {
     family: (j['family'] ?? '') as String,
     notes: (j['notes'] ?? '') as String,
     priceOverrides: ((j['priceOverrides'] ?? {}) as Map).map((k, v) => MapEntry(k as String, (v as num).toDouble())),
+    hoursOverrides: ((j['hoursOverrides'] ?? {}) as Map).map((k, v) => MapEntry(k as String, (v as num).toDouble())),
     archived: (j['archived'] ?? false) as bool,
     joinedAt: j['joinedAt'] == null ? DateTime(2000) : parseDateKey(j['joinedAt'] as String),
   );

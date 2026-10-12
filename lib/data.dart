@@ -225,16 +225,17 @@ extension Accounts on AppData {
         final month = monthKey(d);
         final price = s.priceOverrides[g.id] ?? g.priceFor(month);
         final took = !l.start.isAfter(now) && !isAbsent(l, s.id);
+        final h = studentHours(s, l);
         if (took) {
           attended++;
-          hours += l.hours;
+          hours += h;
         }
         if (g.payType == PayType.monthly) {
           // A monthly class is one charge for the month, from its first lesson.
           if (monthsCharged.add('${g.id}|$month')) charges.add(Charge(g, d, price, month: month));
           continue;
         }
-        if (took) charges.add(Charge(g, d, price * l.hours, lesson: l));
+        if (took) charges.add(Charge(g, d, price * h, lesson: l, hours: h));
       }
     }
     final paid = payments.where((p) => p.studentId == s.id).fold<double>(0, (a, p) => a + p.amount);
@@ -250,7 +251,7 @@ extension Accounts on AppData {
 
 /// One thing a student owes for: a lesson, or a month of a monthly class.
 class Charge {
-  Charge(this.group, this.date, this.amount, {this.lesson, this.month});
+  Charge(this.group, this.date, this.amount, {this.lesson, this.month, this.hours = 0});
 
   final Group group;
   final DateTime date;
@@ -259,6 +260,9 @@ class Charge {
 
   /// Set for a month of a monthly class.
   final String? month;
+
+  /// Hours charged for a lesson.
+  final double hours;
 
   /// How much of it the payments cover.
   double paid = 0;
@@ -296,6 +300,12 @@ class Account {
     if (paid > 0) return PayStatus.partial;
     return PayStatus.unpaid;
   }
+}
+
+/// Hours [s] is taught in [l]: their own hours in that class, or the whole lesson.
+double studentHours(Student s, Lesson l) {
+  final h = s.hoursOverrides[l.group.id];
+  return h == null || h <= 0 || h > l.hours ? l.hours : h;
 }
 
 String absenceKey(Lesson l, String studentId) => '${l.key}|$studentId';

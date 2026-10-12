@@ -123,6 +123,7 @@ class AppStore extends ChangeNotifier {
     data.groups.removeWhere((e) => e.id == g.id);
     for (final s in data.students) {
       s.priceOverrides.remove(g.id);
+      s.hoursOverrides.remove(g.id);
     }
     data.absences.removeWhere((k) => k.startsWith('${g.id}|'));
     data.cancelled.removeWhere((k) => k.startsWith('${g.id}|'));
@@ -151,6 +152,7 @@ class AppStore extends ChangeNotifier {
       if (!groupIds.contains(g.id) && has) g.studentIds.remove(s.id);
     }
     s.priceOverrides.removeWhere((gid, _) => !groupIds.contains(gid));
+    s.hoursOverrides.removeWhere((gid, _) => !groupIds.contains(gid));
     await _commit();
   }
 

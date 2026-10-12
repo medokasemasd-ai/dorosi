@@ -343,9 +343,9 @@ String whatsappNumber(String phone) {
 }
 
 /// "حضر حصتين (٦ ساعات)": lessons, with the hours when they are not one hour each.
-String _taken(Iterable<Lesson> ls) {
+String _taken(Student s, Iterable<Lesson> ls) {
   if (ls.isEmpty) return 'محضرش ولا حصة';
-  final h = ls.fold<double>(0, (a, l) => a + l.hours);
+  final h = ls.fold<double>(0, (a, l) => a + studentHours(s, l));
   return 'حضر ${lessonsCount(ls.length)}${h == ls.length ? '' : ' (${hoursCount(h)})'}';
 }
 
@@ -403,7 +403,7 @@ class _LessonLog extends StatelessWidget {
                 for (final w in weeks.entries) ...[
                   const SizedBox(height: 14),
                   Text(
-                    'أسبوع ${fmtShortDate(w.key)} · ${_taken(w.value.where((l) => marks[l.key] == _Mark.taken))}',
+                    'أسبوع ${fmtShortDate(w.key)} · ${_taken(student, w.value.where((l) => marks[l.key] == _Mark.taken))}',
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.muted),
                   ),
                   for (final l in w.value) _row(context, store, l, marks[l.key]!),

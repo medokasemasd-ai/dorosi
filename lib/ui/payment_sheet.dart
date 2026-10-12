@@ -23,7 +23,7 @@ Future<void> showPaymentSheet(BuildContext context, Student student) async {
   final price = first == null
       ? null
       : (student.priceOverrides[first.id] ?? first.currentPrice) *
-            (first.slots.isNotEmpty ? first.slots.first.durationMin / 60 : 1);
+            (student.hoursOverrides[first.id] ?? (first.slots.isNotEmpty ? first.slots.first.durationMin / 60 : 1));
 
   final saved = await showModalBottomSheet<bool>(
     context: context,
@@ -107,7 +107,7 @@ String unitsCount(double n) =>
 /// What one charge is: "السبت ١٠ أكتوبر · رياضيات (ساعتين)" or "رياضيات · شهر أكتوبر".
 String chargeText(Charge c) {
   if (c.lesson == null) return '${c.group.name} · شهر ${monthName(c.date)}';
-  final h = c.lesson!.hours;
+  final h = c.hours;
   return '${weekdayName(c.date.weekday)} ${fmtShortDate(c.date)} · ${c.group.name}'
       '${h == 1 ? '' : ' (${hoursCount(h)})'}';
 }

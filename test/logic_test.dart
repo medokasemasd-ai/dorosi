@@ -373,4 +373,21 @@ void main() {
     expect(a.lessonsTaken, 4);
     expect(a.due, 83);
   });
+
+  test('siblings sharing a three-hour lesson pay for their own hour', () {
+    final g = _group(
+      'g',
+      PayType.perLesson,
+      100,
+      slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 19 * 60 + 30, durationMin: 180)],
+      students: ['s1', 's2'],
+    );
+    final malak = Student(id: 's2', name: 'ملك', joinedAt: DateTime(2026, 10, 1), hoursOverrides: {'g': 1});
+    final d = AppData(students: [s, malak], groups: [g]);
+    final now = DateTime(2026, 10, 10, 23);
+    // Sat 3 and Sat 10.
+    expect(d.accountFor(malak, now).due, 200);
+    expect(d.accountFor(malak, now).hours, 2);
+    expect(d.accountFor(s, now).due, 600);
+  });
 }
