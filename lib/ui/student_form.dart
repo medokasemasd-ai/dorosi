@@ -47,8 +47,8 @@ Future<void> showStudentActions(BuildContext context, Student s) async {
             onTap: () => Navigator.pop(c, 'archive'),
           ),
           ListTile(
-            leading: const Icon(Icons.delete_outline, color: AppColors.unpaid),
-            title: const Text('حذف الطالب', style: TextStyle(color: AppColors.unpaid)),
+            leading: Icon(Icons.delete_outline, color: AppColors.unpaid),
+            title: Text('حذف الطالب', style: TextStyle(color: AppColors.unpaid)),
             onTap: () => Navigator.pop(c, 'delete'),
           ),
         ],
@@ -182,7 +182,7 @@ class _StudentFormState extends State<StudentForm> {
               ),
             ),
             if (groups.isEmpty)
-              const Text('لسه مفيش حصص. ضيف حصة الأول وبعدين اختارها هنا.', style: TextStyle(color: AppColors.muted)),
+              Text('لسه مفيش حصص. ضيف حصة الأول وبعدين اختارها هنا.', style: TextStyle(color: AppColors.muted)),
             for (final g in groups)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),

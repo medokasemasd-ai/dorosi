@@ -2,6 +2,8 @@ import 'package:dorosi/data.dart';
 import 'package:dorosi/main.dart';
 import 'package:dorosi/models.dart';
 import 'package:dorosi/store.dart';
+import 'package:dorosi/ui/settings_page.dart';
+import 'package:dorosi/ui/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,7 +26,11 @@ void main() {
     final store = await _open(t);
     await t.tap(find.text('التذكيرات'));
     await t.pumpAndSettle();
-    await t.scrollUntilVisible(find.textContaining('دولار'), 200, scrollable: find.byType(Scrollable).last);
+    await t.scrollUntilVisible(
+      find.textContaining('دولار'),
+      200,
+      scrollable: find.descendant(of: find.byType(SettingsPage), matching: find.byType(Scrollable)).first,
+    );
     await t.ensureVisible(find.textContaining('دولار'));
     await t.pumpAndSettle();
     await t.tap(find.textContaining('دولار'));
@@ -114,5 +120,23 @@ void main() {
     await t.tap(find.text('أحمد'));
     await t.pumpAndSettle();
     expect(find.text('تسجيل دفع'), findsOneWidget);
+  });
+
+  testWidgets('colour and dark mode can be changed from settings', (t) async {
+    final store = await _open(t);
+    await t.tap(find.text('التذكيرات'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('accent-2')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('ليلي'));
+    await t.pumpAndSettle();
+    expect(store.data.settings.themeColor, 2);
+    expect(store.data.settings.themeMode, 2);
+    expect(AppColors.dark, isTrue);
+    expect(Theme.of(t.element(find.text('ليلي'))).brightness, Brightness.dark);
+    await t.enterText(find.widgetWithText(TextField, 'اسمك (للترحيب في الجدول)'), 'أستاذ محمد');
+    await t.tap(find.text('الجدول'));
+    await t.pumpAndSettle();
+    expect(find.textContaining('يا أستاذ محمد'), findsOneWidget);
   });
 }

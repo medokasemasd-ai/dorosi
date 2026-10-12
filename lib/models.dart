@@ -260,6 +260,9 @@ class Settings {
     this.paymentDay = 0,
     this.paymentHour = 20,
     this.currency = 'ج.م',
+    this.themeColor = 0,
+    this.themeMode = 0,
+    this.teacherName = '',
   });
 
   bool remindStart;
@@ -274,6 +277,15 @@ class Settings {
   int paymentHour;
   String currency;
 
+  /// Index into the app's accent colours.
+  int themeColor;
+
+  /// 0 follows the phone, 1 is always light, 2 is always dark.
+  int themeMode;
+
+  /// Shown in the greeting on the schedule page.
+  String teacherName;
+
   Map<String, dynamic> toJson() => {
     'remindStart': remindStart,
     'remindEnd': remindEnd,
@@ -282,6 +294,9 @@ class Settings {
     'paymentDay': paymentDay,
     'paymentHour': paymentHour,
     'currency': currency,
+    'themeColor': themeColor,
+    'themeMode': themeMode,
+    'teacherName': teacherName,
   };
 
   factory Settings.fromJson(Map<String, dynamic> j) => Settings(
@@ -292,6 +307,9 @@ class Settings {
     paymentDay: (j['paymentDay'] ?? 0) as int,
     paymentHour: (j['paymentHour'] ?? 20) as int,
     currency: (j['currency'] ?? 'ج.م') as String,
+    themeColor: (j['themeColor'] ?? 0) as int,
+    themeMode: (j['themeMode'] ?? 0) as int,
+    teacherName: (j['teacherName'] ?? '') as String,
   );
 }
 

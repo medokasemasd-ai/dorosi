@@ -96,7 +96,7 @@ class _StudentsPageState extends State<StudentsPage> {
                 const SizedBox(height: 8),
                 Text(
                   'المحصّل ${fmtMoney(totalPaid, currency)} من ${fmtMoney(totalDue, currency)}',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
                 ),
               ],
             ),
@@ -119,7 +119,10 @@ class _StudentsPageState extends State<StudentsPage> {
                       selected: _filter == f,
                       showCheckmark: false,
                       selectedColor: AppColors.ink,
-                      labelStyle: TextStyle(color: _filter == f ? Colors.white : AppColors.ink, fontFamily: 'Plex'),
+                      labelStyle: TextStyle(
+                        color: _filter == f ? AppColors.onPrimary : AppColors.ink,
+                        fontFamily: 'Plex',
+                      ),
                       onSelected: (_) => setState(() => _filter = f),
                     ),
                   ),
@@ -182,7 +185,7 @@ class _StudentsPageState extends State<StudentsPage> {
               if (k.isNotEmpty)
                 Text(
                   'الباقي ${fmtMoney(families[k]!.fold<double>(0, (a, r) => a + r.bill.remaining), currency)}',
-                  style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                  style: TextStyle(color: AppColors.muted, fontSize: 13),
                 ),
             ],
           ),
@@ -215,12 +218,12 @@ class _StudentsPageState extends State<StudentsPage> {
                     groups.isEmpty ? 'مش مسجل في حصة' : groups,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
                   if (status == PayStatus.partial || status == PayStatus.unpaid)
                     Text(
                       'عليه ${r.bill.lessonsUnpaid > 0 ? '${unitsCount(r.bill.lessonsUnpaid)} · ' : ''}${fmtMoney(r.bill.remaining, currency)}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.unpaid),
+                      style: TextStyle(fontSize: 12, color: AppColors.unpaid),
                     ),
                 ],
               ),
@@ -281,7 +284,7 @@ class _Stat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+        Text(label, style: TextStyle(color: AppColors.muted, fontSize: 13)),
         Text(
           value,
           style: TextStyle(color: color, fontSize: 26, fontWeight: FontWeight.w700),

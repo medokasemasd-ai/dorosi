@@ -29,7 +29,7 @@ Future<void> showPaymentSheet(BuildContext context, Student student) async {
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    backgroundColor: Colors.white,
+    backgroundColor: AppColors.card,
     builder: (c) => Padding(
       padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(c).bottom),
       child: Column(
@@ -97,8 +97,43 @@ Future<void> showPaymentSheet(BuildContext context, Student student) async {
       ),
     ),
   );
-  if (saved == true && context.mounted) toast(context, 'تم تسجيل الدفع');
+  if (saved != true || !context.mounted) return;
+  final after = store.data.accountFor(student, DateTime.now());
+  if (account.remaining > 0 && after.remaining <= 0) {
+    await celebrate(context, '${student.name} خلّص كل اللي عليه');
+  } else {
+    toast(context, 'تم تسجيل الدفع');
+  }
 }
+
+/// A small celebration when a student's account is cleared.
+Future<void> celebrate(BuildContext context, String text) => showDialog<void>(
+  context: context,
+  builder: (c) => AlertDialog(
+    backgroundColor: AppColors.card,
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.3, end: 1),
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.elasticOut,
+          builder: (_, v, child) => Transform.scale(scale: v, child: child),
+          child: const Text('🎉', style: TextStyle(fontSize: 64)),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          text,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text('الحساب بقى صفر', style: TextStyle(color: AppColors.paid)),
+      ],
+    ),
+    actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('تمام'))],
+  ),
+);
 
 /// "3 lessons", where a two-hour lesson counts as two.
 String unitsCount(double n) =>

@@ -30,7 +30,7 @@ class DayPage extends StatelessWidget {
             Text(fmtDate(day)),
             Text(
               '${lessonsCount(active.length)} · ${studentsCount(students)}',
-              style: const TextStyle(fontSize: 13, color: AppColors.muted, fontWeight: FontWeight.w400),
+              style: TextStyle(fontSize: 13, color: AppColors.muted, fontWeight: FontWeight.w400),
             ),
           ],
         ),
@@ -71,7 +71,7 @@ class LessonCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.card,
         borderRadius: BorderRadius.circular(20),
         border: upcoming && !l.cancelled ? Border.all(color: AppColors.primary, width: 2) : null,
       ),
@@ -111,8 +111,8 @@ class LessonCard extends StatelessWidget {
                       children: [
                         KindPill(g),
                         if (g.stage.isNotEmpty) Pill(g.stage, fg: AppColors.ink, bg: AppColors.soft),
-                        if (l.extra) const Pill('حصة زيادة', fg: AppColors.primary, bg: AppColors.primarySoft),
-                        if (l.cancelled) const Pill('ملغية', fg: AppColors.unpaid, bg: AppColors.unpaidSoft),
+                        if (l.extra) Pill('حصة زيادة', fg: AppColors.primary, bg: AppColors.primarySoft),
+                        if (l.cancelled) Pill('ملغية', fg: AppColors.unpaid, bg: AppColors.unpaidSoft),
                       ],
                     ),
                   ],
@@ -158,7 +158,7 @@ class LessonCard extends StatelessWidget {
           ],
           const SizedBox(height: 6),
           if (members.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Text('مفيش طلاب في الحصة دي لسه', style: TextStyle(color: AppColors.muted)),
             ),
@@ -230,10 +230,10 @@ class _ReminderToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: on ? AppColors.primarySoft : Colors.white,
+      color: on ? AppColors.primarySoft : AppColors.card,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: on ? BorderSide.none : const BorderSide(color: AppColors.line),
+        side: on ? BorderSide.none : BorderSide(color: AppColors.line),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -246,7 +246,7 @@ class _ReminderToggle extends StatelessWidget {
               Icon(
                 on ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
                 size: 18,
-                color: on ? const Color(0xFF1E3A8A) : AppColors.muted,
+                color: on ? AppColors.onPrimarySoft : AppColors.muted,
               ),
               const SizedBox(width: 6),
               Text(
@@ -254,7 +254,7 @@ class _ReminderToggle extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: on ? FontWeight.w600 : FontWeight.w400,
-                  color: on ? const Color(0xFF1E3A8A) : AppColors.muted,
+                  color: on ? AppColors.onPrimarySoft : AppColors.muted,
                 ),
               ),
             ],
@@ -298,7 +298,7 @@ class _StudentRow extends StatelessWidget {
                 children: [
                   Text(student.name, style: const TextStyle(fontSize: 15)),
                   if (student.family.isNotEmpty)
-                    Text('إخوات: ${student.family}', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                    Text('إخوات: ${student.family}', style: TextStyle(fontSize: 12, color: AppColors.muted)),
                 ],
               ),
             ),

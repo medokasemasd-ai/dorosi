@@ -60,8 +60,11 @@ class _SchedulePageState extends State<SchedulePage> {
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
           children: [
             Text(
-              now.hour < 12 ? 'صباح الخير' : 'مساء الخير',
-              style: const TextStyle(color: AppColors.muted, fontSize: 14),
+              [
+                now.hour < 12 ? 'صباح الخير' : 'مساء الخير',
+                if (d.settings.teacherName.trim().isNotEmpty) 'يا ${d.settings.teacherName.trim()}',
+              ].join(' '),
+              style: TextStyle(color: AppColors.muted, fontSize: 14),
             ),
             Text(fmtDate(now), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
@@ -92,7 +95,7 @@ class _SchedulePageState extends State<SchedulePage> {
                       ),
                       Text(
                         '${fmtShortDate(days.first)} – ${fmtShortDate(days.last)} · ${lessonsCount(totalLessons)}',
-                        style: const TextStyle(color: AppColors.muted, fontSize: 13),
+                        style: TextStyle(color: AppColors.muted, fontSize: 13),
                       ),
                     ],
                   ),
@@ -179,12 +182,15 @@ class _NextLessonCard extends StatelessWidget {
             Expanded(
               child: Text(
                 ongoing ? 'الحصة الحالية' : 'الحصة القادمة',
-                style: const TextStyle(color: AppColors.navyText, fontSize: 13),
+                style: TextStyle(color: AppColors.navyText, fontSize: 13),
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: const Color(0xFF2A3A5E), borderRadius: BorderRadius.circular(999)),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+              ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -212,7 +218,7 @@ class _NextLessonCard extends StatelessWidget {
         Text(
           '${dayLabel(l.date, now)} · ${fmtTime(l.startMin)} – ${fmtTime(l.startMin + l.durationMin)} · '
           '${members.length == 1 ? members.first.name : studentsCount(members.length)}',
-          style: const TextStyle(color: AppColors.navyText, fontSize: 14),
+          style: TextStyle(color: AppColors.navyText, fontSize: 14),
         ),
         const SizedBox(height: 12),
         Text(
@@ -239,13 +245,13 @@ class _DayCard extends StatelessWidget {
     final hasReview = lessons.any(
       (l) => l.group.sessions.isNotEmpty && l.group.slots.every((s) => s.weekday != day.weekday),
     );
-    final fg = isToday ? Colors.white : AppColors.ink;
-    final sub = isToday ? const Color(0xFFDCE4FF) : AppColors.muted;
+    final fg = isToday ? AppColors.onPrimary : AppColors.ink;
+    final sub = isToday ? AppColors.onPrimary.withValues(alpha: 0.8) : AppColors.muted;
     return Material(
-      color: isToday ? AppColors.primary : (lessons.isEmpty ? Colors.transparent : Colors.white),
+      color: isToday ? AppColors.primary : (lessons.isEmpty ? Colors.transparent : AppColors.card),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: lessons.isEmpty && !isToday ? const BorderSide(color: Color(0xFFC3CAD8)) : BorderSide.none,
+        side: lessons.isEmpty && !isToday ? BorderSide(color: AppColors.line) : BorderSide.none,
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -266,8 +272,8 @@ class _DayCard extends StatelessWidget {
                   if (isToday)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(999)),
-                      child: const Text(
+                      decoration: BoxDecoration(color: AppColors.onPrimary, borderRadius: BorderRadius.circular(999)),
+                      child: Text(
                         'اليوم',
                         style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w700),
                       ),
@@ -288,7 +294,7 @@ class _DayCard extends StatelessWidget {
                 Text('من ${fmtTime(lessons.first.startMin)}', style: TextStyle(color: sub, fontSize: 12)),
                 if (hasReview) ...[
                   const SizedBox(height: 6),
-                  const Pill('مراجعة', fg: AppColors.review, bg: AppColors.reviewSoft),
+                  Pill('مراجعة', fg: AppColors.review, bg: AppColors.reviewSoft),
                 ],
               ],
             ],

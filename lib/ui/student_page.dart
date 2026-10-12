@@ -76,14 +76,14 @@ class _StudentPageState extends State<StudentPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(s.name, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
-                      if (s.stage.isNotEmpty) Text(s.stage, style: const TextStyle(color: AppColors.muted)),
+                      if (s.stage.isNotEmpty) Text(s.stage, style: TextStyle(color: AppColors.muted)),
                       if (s.phone.isNotEmpty)
                         Text(
                           arDigits(s.phone),
                           textDirection: TextDirection.ltr,
-                          style: const TextStyle(color: AppColors.muted),
+                          style: TextStyle(color: AppColors.muted),
                         ),
-                      if (s.archived) const Pill('من الطلاب السابقين', fg: AppColors.muted, bg: AppColors.soft),
+                      if (s.archived) Pill('من الطلاب السابقين', fg: AppColors.muted, bg: AppColors.soft),
                     ],
                   ),
                 ),
@@ -142,7 +142,7 @@ class _StudentPageState extends State<StudentPage> {
                 ),
                 if (unpaid.isNotEmpty) ...[
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     'الحصص اللي لسه مدفوعتش',
                     style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
                   ),
@@ -154,7 +154,7 @@ class _StudentPageState extends State<StudentPage> {
                           Expanded(child: Text(chargeText(c), style: const TextStyle(fontSize: 13))),
                           Text(
                             c.paid > 0 ? 'باقي ${fmtMoney(c.amount - c.paid, currency)}' : fmtMoney(c.amount, currency),
-                            style: const TextStyle(fontSize: 13, color: AppColors.unpaid, fontWeight: FontWeight.w600),
+                            style: TextStyle(fontSize: 13, color: AppColors.unpaid, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -201,7 +201,7 @@ class _StudentPageState extends State<StudentPage> {
           const SizedBox(height: 16),
           const SectionTitle('الحصص'),
           if (groups.isEmpty)
-            const Text('مش مسجل في أي حصة', style: TextStyle(color: AppColors.muted))
+            Text('مش مسجل في أي حصة', style: TextStyle(color: AppColors.muted))
           else
             for (final g in groups)
               Padding(
@@ -215,7 +215,7 @@ class _StudentPageState extends State<StudentPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(g.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                            Text(scheduleSummary(g), style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+                            Text(scheduleSummary(g), style: TextStyle(color: AppColors.muted, fontSize: 13)),
                           ],
                         ),
                       ),
@@ -256,7 +256,7 @@ class _StudentPageState extends State<StudentPage> {
           const SizedBox(height: 8),
           const SectionTitle('سجل المدفوعات'),
           if (payments.isEmpty)
-            const Text('لسه مفيش مدفوعات', style: TextStyle(color: AppColors.muted))
+            Text('لسه مفيش مدفوعات', style: TextStyle(color: AppColors.muted))
           else
             Panel(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -265,14 +265,14 @@ class _StudentPageState extends State<StudentPage> {
                   for (final p in payments)
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text(fmtMoney(p.amount, currency), style: const TextStyle(fontWeight: FontWeight.w600)),
+                      title: Text(fmtMoney(p.amount, currency), style: TextStyle(fontWeight: FontWeight.w600)),
                       subtitle: Text(
                         'اتدفع ${weekdayName(p.paidAt.weekday)} ${fmtShortDate(p.paidAt)}'
                         '${p.note.isNotEmpty ? ' · ${p.note}' : ''}',
                       ),
                       trailing: IconButton(
                         tooltip: 'حذف الدفعة',
-                        icon: const Icon(Icons.delete_outline),
+                        icon: Icon(Icons.delete_outline),
                         onPressed: () async {
                           if (await confirm(
                             context,
@@ -289,25 +289,25 @@ class _StudentPageState extends State<StudentPage> {
                 ],
               ),
             ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => openStudentForm(context, student: s),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('تعديل البيانات'),
+                  icon: Icon(Icons.edit_outlined),
+                  label: Text('تعديل البيانات'),
                 ),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(foregroundColor: AppColors.unpaid),
                   onPressed: () async {
                     if (await deleteStudentAsk(context, s) && context.mounted) Navigator.pop(context);
                   },
-                  icon: const Icon(Icons.delete_outline),
-                  label: const Text('حذف الطالب'),
+                  icon: Icon(Icons.delete_outline),
+                  label: Text('حذف الطالب'),
                 ),
               ),
             ],
@@ -317,16 +317,16 @@ class _StudentPageState extends State<StudentPage> {
     );
   }
 
-  Widget _line(String label, String value, {Color color = AppColors.ink, bool bold = false}) => Padding(
+  Widget _line(String label, String value, {Color? color, bool bold = false}) => Padding(
     padding: const EdgeInsets.only(bottom: 4),
     child: Row(
       children: [
         Expanded(
-          child: Text(label, style: const TextStyle(color: AppColors.muted)),
+          child: Text(label, style: TextStyle(color: AppColors.muted)),
         ),
         Text(
           value,
-          style: TextStyle(color: color, fontWeight: bold ? FontWeight.w700 : FontWeight.w600),
+          style: TextStyle(color: color ?? AppColors.ink, fontWeight: bold ? FontWeight.w700 : FontWeight.w600),
         ),
       ],
     ),
@@ -385,7 +385,7 @@ class _LessonLog extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (lessons.isEmpty)
-                const Text('مفيش حصص في الشهر ده', style: TextStyle(color: AppColors.muted))
+                Text('مفيش حصص في الشهر ده', style: TextStyle(color: AppColors.muted))
               else ...[
                 Wrap(
                   spacing: 6,
@@ -404,12 +404,12 @@ class _LessonLog extends StatelessWidget {
                   const SizedBox(height: 14),
                   Text(
                     'أسبوع ${fmtShortDate(w.key)} · ${_taken(student, w.value.where((l) => marks[l.key] == _Mark.taken))}',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.muted),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.muted),
                   ),
                   for (final l in w.value) _row(context, store, l, marks[l.key]!),
                 ],
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'دوس على أي حصة عشان تغيّرها: حضر، غاب، اتلغت، أو تنقلها ليوم تاني.',
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
@@ -498,7 +498,7 @@ class _Count extends StatelessWidget {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color),
         ),
         if (sub != null) Text(sub!, style: TextStyle(fontSize: 12, color: color)),
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+        Text(label, style: TextStyle(fontSize: 12, color: AppColors.muted)),
       ],
     );
   }

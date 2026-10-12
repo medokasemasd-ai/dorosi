@@ -93,13 +93,13 @@ class StatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (status) {
       case PayStatus.paid:
-        return const Pill('دفع', fg: AppColors.paid, bg: AppColors.paidSoft);
+        return Pill('دفع', fg: AppColors.paid, bg: AppColors.paidSoft);
       case PayStatus.partial:
-        return const Pill('دفع جزء', fg: AppColors.partial, bg: AppColors.partialSoft);
+        return Pill('دفع جزء', fg: AppColors.partial, bg: AppColors.partialSoft);
       case PayStatus.unpaid:
-        return const Pill('لم يدفع', fg: AppColors.unpaid, bg: AppColors.unpaidSoft);
+        return Pill('لم يدفع', fg: AppColors.unpaid, bg: AppColors.unpaidSoft);
       case PayStatus.none:
-        return const Pill('لا يوجد مستحق', fg: AppColors.muted, bg: AppColors.soft);
+        return Pill('لا يوجد مستحق', fg: AppColors.muted, bg: AppColors.soft);
     }
   }
 }
@@ -113,11 +113,11 @@ class KindPill extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (group.kind) {
       case GroupKind.individual:
-        return const Pill('فردي', fg: AppColors.ink, bg: AppColors.soft);
+        return Pill('فردي', fg: AppColors.ink, bg: AppColors.soft);
       case GroupKind.group:
-        return const Pill('مجموعة', fg: AppColors.primary, bg: AppColors.primarySoft);
+        return Pill('مجموعة', fg: AppColors.primary, bg: AppColors.primarySoft);
       case GroupKind.review:
-        return const Pill('مراجعة', fg: AppColors.review, bg: AppColors.reviewSoft);
+        return Pill('مراجعة', fg: AppColors.review, bg: AppColors.reviewSoft);
     }
   }
 }
@@ -163,7 +163,7 @@ class EmptyState extends StatelessWidget {
           Text(
             text,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.muted, fontSize: 15, height: 1.6),
+            style: TextStyle(color: AppColors.muted, fontSize: 15, height: 1.6),
           ),
           if (action != null) ...[const SizedBox(height: 16), action!],
         ],

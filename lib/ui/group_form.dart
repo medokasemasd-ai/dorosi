@@ -136,7 +136,7 @@ class _GroupFormState extends State<GroupForm> {
               }),
             ),
             if (_kind == GroupKind.review)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 8),
                 child: Text(
                   'حصص مراجعة قبل الامتحان بتواريخ محددة، وبعدها تختفي من الجدول لوحدها.',
@@ -259,7 +259,7 @@ class _GroupFormState extends State<GroupForm> {
               ),
             ),
             if (students.isEmpty)
-              const Text('لسه مفيش طلاب. دوس "طالب جديد" وضيفه بسرعة.', style: TextStyle(color: AppColors.muted)),
+              Text('لسه مفيش طلاب. دوس "طالب جديد" وضيفه بسرعة.', style: TextStyle(color: AppColors.muted)),
             if (students.isNotEmpty)
               Panel(
                 padding: const EdgeInsets.symmetric(vertical: 4),
@@ -523,7 +523,7 @@ class _DurationButton extends StatelessWidget {
       itemBuilder: (_) => [for (final o in _options) PopupMenuItem(value: o, child: Text(fmtDuration(o)))],
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        child: Text(fmtDuration(minutes), style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+        child: Text(fmtDuration(minutes), style: TextStyle(color: AppColors.muted, fontSize: 13)),
       ),
     );
   }

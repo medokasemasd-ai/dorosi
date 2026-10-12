@@ -97,11 +97,11 @@ class _GroupTile extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            Text(scheduleSummary(g), style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+            Text(scheduleSummary(g), style: TextStyle(color: AppColors.muted, fontSize: 13)),
             const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(Icons.people_outline, size: 16, color: AppColors.muted),
+                Icon(Icons.people_outline, size: 16, color: AppColors.muted),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(

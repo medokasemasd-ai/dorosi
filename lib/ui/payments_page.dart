@@ -71,7 +71,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('الباقي على الطلاب كله', style: TextStyle(color: AppColors.navyText, fontSize: 13)),
+                Text('الباقي على الطلاب كله', style: TextStyle(color: AppColors.navyText, fontSize: 13)),
                 const SizedBox(height: 2),
                 Text(
                   fmtMoney(remaining, currency),
@@ -79,7 +79,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
                 ),
                 Text(
                   owing.isEmpty ? 'كل الطلاب دافعين' : 'على ${studentsCount(owing.length)}',
-                  style: const TextStyle(color: AppColors.navyText, fontSize: 13),
+                  style: TextStyle(color: AppColors.navyText, fontSize: 13),
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -111,7 +111,10 @@ class _PaymentsPageState extends State<PaymentsPage> {
                             selected: _show == s,
                             showCheckmark: false,
                             selectedColor: AppColors.ink,
-                            labelStyle: TextStyle(color: _show == s ? Colors.white : AppColors.ink, fontFamily: 'Plex'),
+                            labelStyle: TextStyle(
+                              color: _show == s ? AppColors.onPrimary : AppColors.ink,
+                              fontFamily: 'Plex',
+                            ),
                             onSelected: (_) => setState(() => _show = s),
                           ),
                         ),
@@ -138,7 +141,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
                     padding: const EdgeInsets.all(20),
                     child: Text(
                       _show == _Show.owing ? 'محدش عليه فلوس 👌' : 'مفيش طلاب هنا',
-                      style: const TextStyle(color: AppColors.muted),
+                      style: TextStyle(color: AppColors.muted),
                     ),
                   ),
                 for (final r in rows)
@@ -170,7 +173,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
           const SizedBox(height: 6),
           Text(
             'المبالغ بالـ$currency. دوس على أي طالب عشان تسجّل دفع أو تبعتله تذكير على واتساب.',
-            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
           ),
           const SizedBox(height: 20),
           const SectionTitle('الدخل في آخر ٦ شهور'),
@@ -275,7 +278,7 @@ class _Figure extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.navyText, fontSize: 11)),
+        Text(label, style: TextStyle(color: AppColors.navyText, fontSize: 11)),
         Text(
           value,
           style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
@@ -333,7 +336,7 @@ class _TableRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: style.copyWith(fontWeight: header ? null : FontWeight.w600),
                 ),
-                if (note != null) Text(note!, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                if (note != null) Text(note!, style: TextStyle(fontSize: 11, color: AppColors.muted)),
               ],
             ),
           ),
@@ -410,7 +413,7 @@ class _Recent extends StatelessWidget {
   Widget build(BuildContext context) {
     final recent = [...payments]..sort((a, b) => b.paidAt.compareTo(a.paidAt));
     if (recent.isEmpty) {
-      return const Text('لسه مفيش مدفوعات', style: TextStyle(color: AppColors.muted));
+      return Text('لسه مفيش مدفوعات', style: TextStyle(color: AppColors.muted));
     }
     return Panel(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -427,7 +430,7 @@ class _Recent extends StatelessWidget {
               ),
               trailing: Text(
                 fmtMoney(p.amount, currency),
-                style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.paid),
+                style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.paid),
               ),
               onTap: data.student(p.studentId) == null
                   ? null

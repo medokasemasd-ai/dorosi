@@ -59,18 +59,47 @@ class _DorosiAppState extends State<DorosiApp> with WidgetsBindingObserver {
   }
 
   @override
+  void didChangePlatformBrightness() => setState(() {});
+
+  String? _look;
+
+  @override
   Widget build(BuildContext context) {
     return StoreScope(
       store: widget.store,
-      child: MaterialApp(
-        title: 'دروسي',
-        debugShowCheckedModeBanner: false,
-        theme: buildTheme(),
-        locale: const Locale('ar'),
-        supportedLocales: const [Locale('ar')],
-        localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        home: const Shell(),
+      child: ListenableBuilder(
+        listenable: widget.store,
+        builder: (context, _) {
+          final s = widget.store.data.settings;
+          final phoneDark = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+          final dark = s.themeMode == 2 || (s.themeMode == 0 && phoneDark);
+          final look = '${s.themeColor}/$dark';
+          if (look != _look) {
+            AppColors.apply(accent: s.themeColor, dark: dark);
+            // Some widgets paint with the colours directly, so redraw everything once they change.
+            if (_look != null) WidgetsBinding.instance.addPostFrameCallback((_) => _redrawAll(context));
+            _look = look;
+          }
+          return MaterialApp(
+            title: 'دروسي',
+            debugShowCheckedModeBanner: false,
+            theme: buildTheme(),
+            locale: const Locale('ar'),
+            supportedLocales: const [Locale('ar')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            home: const Shell(),
+          );
+        },
       ),
     );
+  }
+
+  void _redrawAll(BuildContext context) {
+    void mark(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(mark);
+    }
+
+    if (context.mounted) (context as Element).visitChildren(mark);
   }
 }

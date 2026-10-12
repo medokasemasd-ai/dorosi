@@ -39,6 +39,9 @@ class SettingsPage extends StatelessWidget {
             time: next == null ? null : '${dayLabel(next.date, DateTime.now())} · ${fmtTime(next.startMin)}',
           ),
           const SizedBox(height: 16),
+          const SectionTitle('شكل التطبيق'),
+          const _Look(),
+          const SizedBox(height: 20),
           const SectionTitle('التذكيرات'),
           Panel(
             padding: const EdgeInsets.symmetric(vertical: 4),
@@ -115,7 +118,7 @@ class SettingsPage extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'كل حصة ليها كمان زرار تشغيل وإيقاف للتذكير من صفحة اليوم.',
-            style: const TextStyle(color: AppColors.muted, fontSize: 13),
+            style: TextStyle(color: AppColors.muted, fontSize: 13),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
@@ -183,7 +186,7 @@ class SettingsPage extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'لو فيه نسخة أحدث، نزّلها وسطّبها فوق دي وبياناتك هتفضل زي ما هي.',
                   style: TextStyle(color: AppColors.muted, fontSize: 13),
                 ),
@@ -260,6 +263,82 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
+class _Look extends StatefulWidget {
+  const _Look();
+
+  @override
+  State<_Look> createState() => _LookState();
+}
+
+class _LookState extends State<_Look> {
+  late final _name = TextEditingController(text: StoreScope.read(context).data.settings.teacherName);
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final s = store.data.settings;
+    return Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('لون التطبيق', style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              for (var i = 0; i < accents.length; i++)
+                Tooltip(
+                  message: accents[i].$1,
+                  child: InkResponse(
+                    key: ValueKey('accent-$i'),
+                    onTap: () => store.updateSettings((x) => x.themeColor = i),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: accents[i].$2,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: s.themeColor == i ? AppColors.ink : Colors.transparent, width: 3),
+                      ),
+                      child: s.themeColor == i ? const Icon(Icons.check, color: Colors.white) : null,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text('الوضع', style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          SegmentedButton<int>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: 1, icon: Icon(Icons.light_mode_outlined), label: Text('فاتح')),
+              ButtonSegment(value: 2, icon: Icon(Icons.dark_mode_outlined), label: Text('ليلي')),
+              ButtonSegment(value: 0, icon: Icon(Icons.phone_android), label: Text('تلقائي')),
+            ],
+            selected: {s.themeMode},
+            onSelectionChanged: (v) => store.updateSettings((x) => x.themeMode = v.first),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _name,
+            decoration: const InputDecoration(labelText: 'اسمك (للترحيب في الجدول)', hintText: 'مثلًا: أستاذ محمد'),
+            onChanged: (v) => store.updateSettings((x) => x.teacherName = v),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _WidgetPreview extends StatelessWidget {
   const _WidgetPreview({this.title, this.time});
 
@@ -280,7 +359,7 @@ class _WidgetPreview extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'الحصة الجاية',
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary),
                 ),
@@ -292,7 +371,7 @@ class _WidgetPreview extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
               'شكل الويدجت على الشاشة الرئيسية',
               style: TextStyle(color: AppColors.navyText, fontSize: 13, height: 1.5),
