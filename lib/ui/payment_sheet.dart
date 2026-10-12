@@ -18,7 +18,12 @@ Future<void> showPaymentSheet(BuildContext context, Student student) async {
   final currency = store.data.settings.currency;
   // Per-lesson price of the student's first per-lesson class, for the quick buttons.
   final perLesson = store.data.groupsOf(student).where((g) => g.payType == PayType.perLesson).toList();
-  final price = perLesson.isEmpty ? null : (student.priceOverrides[perLesson.first.id] ?? perLesson.first.currentPrice);
+  final first = perLesson.isEmpty ? null : perLesson.first;
+  // The price of one lesson of usual length (the price is per hour).
+  final price = first == null
+      ? null
+      : (student.priceOverrides[first.id] ?? first.currentPrice) *
+            (first.slots.isNotEmpty ? first.slots.first.durationMin / 60 : 1);
 
   final saved = await showModalBottomSheet<bool>(
     context: context,

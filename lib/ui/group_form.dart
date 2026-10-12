@@ -52,7 +52,7 @@ class _GroupFormState extends State<GroupForm> {
   late final _notes = TextEditingController(text: _orig?.notes);
   late final _price = TextEditingController(text: _orig == null ? '' : _plain(_orig.currentPrice));
   late GroupKind _kind = _orig?.kind ?? GroupKind.group;
-  late PayType _pay = _orig?.payType ?? PayType.monthly;
+  late PayType _pay = _orig?.payType ?? PayType.perLesson;
   late bool _remindStart = _orig?.remindStart ?? true;
   late bool _remindEnd = _orig?.remindEnd ?? true;
   late DateTime _start = _orig?.createdAt ?? DateTime(DateTime.now().year, DateTime.now().month);

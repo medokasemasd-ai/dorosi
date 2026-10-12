@@ -113,7 +113,14 @@ class _StudentPageState extends State<StudentPage> {
               children: [
                 Row(
                   children: [
-                    Expanded(child: _Count('اتاخد', unitsCount(account.lessonsTaken), AppColors.ink)),
+                    Expanded(
+                      child: _Count(
+                        'حضر',
+                        unitsCount(account.lessonsTaken),
+                        AppColors.ink,
+                        sub: account.hours == account.attended ? null : hoursCount(account.hours),
+                      ),
+                    ),
                     Expanded(child: _Count('اتدفع', unitsCount(account.lessonsPaid), AppColors.paid)),
                     Expanded(
                       child: _Count(
@@ -335,10 +342,11 @@ String whatsappNumber(String phone) {
   return p;
 }
 
-/// A two-hour lesson counts as two lessons.
-String _taken(double n) {
-  if (n == 0) return 'محضرش ولا حصة';
-  return n == n.roundToDouble() ? 'حضر ${lessonsCount(n.toInt())}' : 'حضر ${arNum(n)} حصة';
+/// "حضر حصتين (٦ ساعات)": lessons, with the hours when they are not one hour each.
+String _taken(Iterable<Lesson> ls) {
+  if (ls.isEmpty) return 'محضرش ولا حصة';
+  final h = ls.fold<double>(0, (a, l) => a + l.hours);
+  return 'حضر ${lessonsCount(ls.length)}${h == ls.length ? '' : ' (${hoursCount(h)})'}';
 }
 
 enum _Mark { taken, absent, cancelled, coming }
@@ -363,7 +371,7 @@ class _LessonLog extends StatelessWidget {
     }
 
     final marks = {for (final l in lessons) l.key: mark(l)};
-    double count(_Mark m) => lessons.where((l) => marks[l.key] == m).fold<double>(0, (a, l) => a + l.hours);
+    int count(_Mark m) => lessons.where((l) => marks[l.key] == m).length;
     final weeks = <DateTime, List<Lesson>>{};
     for (final l in lessons) {
       weeks.putIfAbsent(weekStart(l.date), () => []).add(l);
@@ -395,7 +403,7 @@ class _LessonLog extends StatelessWidget {
                 for (final w in weeks.entries) ...[
                   const SizedBox(height: 14),
                   Text(
-                    'أسبوع ${fmtShortDate(w.key)} · ${_taken(w.value.where((l) => marks[l.key] == _Mark.taken).fold<double>(0, (a, l) => a + l.hours))}',
+                    'أسبوع ${fmtShortDate(w.key)} · ${_taken(w.value.where((l) => marks[l.key] == _Mark.taken))}',
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppColors.muted),
                   ),
                   for (final l in w.value) _row(context, store, l, marks[l.key]!),
@@ -473,11 +481,12 @@ class _LessonLog extends StatelessWidget {
 }
 
 class _Count extends StatelessWidget {
-  const _Count(this.label, this.value, this.color);
+  const _Count(this.label, this.value, this.color, {this.sub});
 
   final String label;
   final String value;
   final Color color;
+  final String? sub;
 
   @override
   Widget build(BuildContext context) {
@@ -488,6 +497,7 @@ class _Count extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: color),
         ),
+        if (sub != null) Text(sub!, style: TextStyle(fontSize: 12, color: color)),
         Text(label, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
       ],
     );

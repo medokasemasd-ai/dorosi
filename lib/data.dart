@@ -216,19 +216,25 @@ extension Accounts on AppData {
     final ids = {for (final g in groupsOf(s, includeArchived: true)) g.id};
     final monthsCharged = <String>{};
     final today = dateOnly(now);
+    var attended = 0;
+    var hours = 0.0;
     for (var d = dateOnly(s.joinedAt); !d.isAfter(today); d = DateTime(d.year, d.month, d.day + 1)) {
       for (final l in lessonsOn(d, forBilling: true)) {
         if (!ids.contains(l.group.id) || l.cancelled) continue;
         final g = l.group;
         final month = monthKey(d);
         final price = s.priceOverrides[g.id] ?? g.priceFor(month);
+        final took = !l.start.isAfter(now) && !isAbsent(l, s.id);
+        if (took) {
+          attended++;
+          hours += l.hours;
+        }
         if (g.payType == PayType.monthly) {
           // A monthly class is one charge for the month, from its first lesson.
           if (monthsCharged.add('${g.id}|$month')) charges.add(Charge(g, d, price, month: month));
           continue;
         }
-        if (l.start.isAfter(now) || isAbsent(l, s.id)) continue;
-        charges.add(Charge(g, d, price * l.hours, lesson: l));
+        if (took) charges.add(Charge(g, d, price * l.hours, lesson: l));
       }
     }
     final paid = payments.where((p) => p.studentId == s.id).fold<double>(0, (a, p) => a + p.amount);
@@ -238,7 +244,7 @@ extension Accounts on AppData {
       c.paid = take < 0 ? 0 : take;
       left -= c.paid;
     }
-    return Account(charges, paid);
+    return Account(charges, paid, attended: attended, hours: hours);
   }
 }
 
@@ -258,16 +264,17 @@ class Charge {
   double paid = 0;
 
   bool get settled => paid >= amount - 0.001;
-
-  /// A lesson of two hours counts as two lessons.
-  double get units => lesson?.hours ?? 0;
 }
 
 class Account {
-  Account(this.charges, this.paid);
+  Account(this.charges, this.paid, {this.attended = 0, this.hours = 0});
 
   final List<Charge> charges;
   final double paid;
+
+  /// Lessons attended in all classes, monthly ones included, and their hours.
+  final int attended;
+  final double hours;
 
   double get due => charges.fold<double>(0, (a, c) => a + c.amount);
   double get remaining => due - paid > 0 ? due - paid : 0;
@@ -276,9 +283,11 @@ class Account {
   double get credit => paid - due > 0 ? paid - due : 0;
 
   Iterable<Charge> get lessons => charges.where((c) => c.lesson != null);
-  double get lessonsTaken => lessons.fold<double>(0, (a, c) => a + c.units);
-  double get lessonsPaid => lessons.where((c) => c.settled).fold<double>(0, (a, c) => a + c.units);
-  double get lessonsUnpaid => lessonsTaken - lessonsPaid;
+  double get lessonsTaken => attended.toDouble();
+
+  /// Per-lesson charges only: each lesson counts once, whatever its length.
+  double get lessonsPaid => lessons.where((c) => c.settled).length.toDouble();
+  double get lessonsUnpaid => lessons.where((c) => !c.settled).length.toDouble();
   List<Charge> get unpaid => charges.where((c) => !c.settled).toList();
 
   PayStatus get status {
