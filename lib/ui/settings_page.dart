@@ -39,6 +39,17 @@ class SettingsPage extends StatelessWidget {
             time: next == null ? null : '${dayLabel(next.date, DateTime.now())} · ${fmtTime(next.startMin)}',
           ),
           const SizedBox(height: 16),
+          const SectionTitle('وضع العرض'),
+          Panel(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: SwitchListTile(
+              value: store.showcase,
+              onChanged: store.setShowcase,
+              title: const Text('اعرض بيانات تجريبية'),
+              subtitle: const Text('لما تفرّج حد على التطبيق: يشوف طلاب وحصص وهمية، وبياناتك تفضل مخفية ومحفوظة.'),
+            ),
+          ),
+          const SizedBox(height: 20),
           const SectionTitle('شكل التطبيق'),
           const _Look(),
           const SizedBox(height: 20),

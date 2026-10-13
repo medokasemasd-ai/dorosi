@@ -14,6 +14,8 @@ Future<void> main() async {
   // The web build is only a preview, so it runs on sample data in memory.
   final store = AppStore(kIsWeb ? MemoryStorage(demoJson()) : FileStorage());
   store.onChanged = (data) {
+    // Sample data must never replace the real reminders or widget.
+    if (store.showcase) return;
     Reminders.instance.reschedule(data);
     syncHomeWidget(data);
   };

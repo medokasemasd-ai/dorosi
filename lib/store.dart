@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'data.dart';
+import 'demo.dart';
 import 'models.dart';
 
 /// Where the app's JSON document lives.
@@ -82,17 +83,39 @@ class AppStore extends ChangeNotifier {
     onChanged?.call(data);
   }
 
+  /// The teacher's own data while sample data is shown in its place.
+  AppData? _real;
+
+  /// Showing sample data, e.g. to let another teacher try the app. Nothing is
+  /// saved and reminders keep using the real data.
+  bool get showcase => _real != null;
+
+  void setShowcase(bool on) {
+    if (on == showcase) return;
+    if (on) {
+      _real = data;
+      data = AppData.fromJson(jsonDecode(demoJson()) as Map<String, dynamic>);
+      data.settings = Settings.fromJson(_real!.settings.toJson());
+    } else {
+      data = _real!;
+      _real = null;
+    }
+    notifyListeners();
+  }
+
   Future<void> _commit() async {
     notifyListeners();
+    if (showcase) return;
     await _storage.write(jsonEncode(data.toJson()));
     _sideEffects?.cancel();
     _sideEffects = Timer(const Duration(milliseconds: 400), () => onChanged?.call(data));
   }
 
-  String exportJson() => const JsonEncoder.withIndent(' ').convert(data.toJson());
+  String exportJson() => const JsonEncoder.withIndent(' ').convert((_real ?? data).toJson());
 
   /// Replaces all data with a backup. Throws if the text is not a valid backup.
   Future<void> importJson(String raw) async {
+    if (showcase) throw const FormatException('اقفل وضع العرض الأول');
     final decoded = jsonDecode(raw);
     if (decoded is! Map<String, dynamic> || !decoded.containsKey('students')) {
       throw const FormatException('ليس ملف نسخة احتياطية من دروسي');

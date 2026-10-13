@@ -139,4 +139,26 @@ void main() {
     await t.pumpAndSettle();
     expect(find.textContaining('يا أستاذ محمد'), findsOneWidget);
   });
+
+  testWidgets('showcase mode hides the real students and saves nothing', (t) async {
+    final store = await _open(t);
+    var reminders = 0;
+    store.onChanged = (_) => reminders++;
+    await t.tap(find.text('التذكيرات'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('اعرض بيانات تجريبية'));
+    await t.pumpAndSettle();
+    expect(store.showcase, isTrue);
+    expect(find.text('وضع العرض: دي بيانات تجريبية'), findsOneWidget);
+    await t.tap(find.text('الطلاب'));
+    await t.pumpAndSettle();
+    expect(find.text('أحمد'), findsNothing);
+    expect(find.text('سارة إبراهيم'), findsOneWidget);
+    expect(store.exportJson(), contains('"أحمد"'));
+    await t.tap(find.text('خروج'));
+    await t.pumpAndSettle();
+    expect(store.showcase, isFalse);
+    expect(find.text('أحمد'), findsOneWidget);
+    expect(reminders, 0);
+  });
 }
