@@ -390,4 +390,39 @@ void main() {
     expect(d.accountFor(malak, now).hours, 2);
     expect(d.accountFor(s, now).due, 600);
   });
+
+  test('a holiday stops lessons, charges and reminders until it ends', () async {
+    final store = AppStore(MemoryStorage());
+    store.data = AppData(
+      students: [s],
+      groups: [
+        _group(
+          'g',
+          PayType.perLesson,
+          100,
+          slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 18 * 60, durationMin: 60)],
+          students: ['s1'],
+        ),
+      ],
+    );
+    final now = DateTime(2026, 10, 20, 12);
+    expect(store.data.accountFor(s, now).due, 300); // 3, 10, 17 October
+    await store.addBreak(DateTime(2026, 10, 9), DateTime(2026, 10, 18));
+    expect(store.data.lessonsOn(DateTime(2026, 10, 10)), isEmpty);
+    expect(store.data.accountFor(s, now).due, 100);
+    expect(store.data.upcoming(DateTime(2026, 10, 9), days: 9), isEmpty);
+
+    // An open-ended stop lasts until the teacher brings the lessons back.
+    await store.addBreak(DateTime(2026, 10, 19), null);
+    expect(store.data.lessonsOn(DateTime(2027, 3, 6)), isEmpty);
+    await store.endBreak(store.data.breaks.last, DateTime(2026, 10, 31));
+    expect(store.data.lessonsOn(DateTime(2026, 10, 24)), isEmpty);
+    expect(store.data.lessonsOn(DateTime(2026, 10, 31)), hasLength(1));
+
+    final reloaded = AppData.fromJson(jsonDecode(jsonEncode(store.data.toJson())) as Map<String, dynamic>);
+    expect(reloaded.breaks.map((b) => b.to), [DateTime(2026, 10, 18), DateTime(2026, 10, 30)]);
+
+    await store.archiveAllGroups();
+    expect(store.data.groups.every((g) => g.archived), isTrue);
+  });
 }

@@ -11,12 +11,14 @@ class AppData {
     Set<String>? absences,
     Set<String>? cancelled,
     Settings? settings,
+    List<Break>? breaks,
   }) : groups = groups ?? [],
        students = students ?? [],
        payments = payments ?? [],
        absences = absences ?? {},
        cancelled = cancelled ?? {},
-       settings = settings ?? Settings();
+       settings = settings ?? Settings(),
+       breaks = breaks ?? [];
 
   List<Group> groups;
   List<Student> students;
@@ -29,6 +31,9 @@ class AppData {
   Set<String> cancelled;
   Settings settings;
 
+  /// Holidays with no lessons at all.
+  List<Break> breaks;
+
   static const int schemaVersion = 1;
 
   Map<String, dynamic> toJson() => {
@@ -39,6 +44,7 @@ class AppData {
     'absences': absences.toList(),
     'cancelled': cancelled.toList(),
     'settings': settings.toJson(),
+    'breaks': breaks.map((e) => e.toJson()).toList(),
   };
 
   factory AppData.fromJson(Map<String, dynamic> j) => AppData(
@@ -48,6 +54,7 @@ class AppData {
     absences: ((j['absences'] ?? []) as List).cast<String>().toSet(),
     cancelled: ((j['cancelled'] ?? []) as List).cast<String>().toSet(),
     settings: Settings.fromJson((j['settings'] ?? <String, dynamic>{}) as Map<String, dynamic>),
+    breaks: ((j['breaks'] ?? []) as List).map((e) => Break.fromJson(e as Map<String, dynamic>)).toList(),
   );
 
   Student? student(String id) {
@@ -84,6 +91,7 @@ class AppData {
   List<Lesson> lessonsOn(DateTime day, {bool forBilling = false, bool includeArchived = false}) {
     final d = dateOnly(day);
     final out = <Lesson>[];
+    if (onBreak(d) != null) return out;
     for (final g in groups) {
       if (forBilling) {
         if (d.isBefore(dateOnly(g.createdAt))) continue;
@@ -104,6 +112,14 @@ class AppData {
     }
     out.sort((a, b) => a.startMin.compareTo(b.startMin));
     return out;
+  }
+
+  /// The holiday [day] falls in, if any.
+  Break? onBreak(DateTime day) {
+    for (final b in breaks) {
+      if (b.covers(day)) return b;
+    }
+    return null;
   }
 
   /// Lessons that have not ended yet, starting from [now], over [days] days.

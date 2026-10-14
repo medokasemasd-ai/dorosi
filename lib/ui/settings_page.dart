@@ -12,6 +12,7 @@ import '../models.dart';
 import '../services/reminders.dart';
 import '../store.dart';
 import 'common.dart';
+import 'help.dart';
 import 'theme.dart';
 
 /// The release number, set by the build (empty in local builds).
@@ -30,7 +31,7 @@ class SettingsPage extends StatelessWidget {
     final next = store.data.nextLesson(DateTime.now());
 
     return Scaffold(
-      appBar: AppBar(title: const Text('التذكيرات والإعدادات')),
+      appBar: AppBar(title: const Text('التذكيرات والإعدادات'), actions: const [HelpButton(4)]),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [

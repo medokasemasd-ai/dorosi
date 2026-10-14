@@ -9,6 +9,7 @@ import '../store.dart';
 import 'common.dart';
 import 'payment_sheet.dart';
 import 'student_page.dart';
+import 'help.dart';
 import 'theme.dart';
 
 enum _Show { owing, all, paid }
@@ -61,7 +62,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
         .fold<double>(0, (a, p) => a + p.amount);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('الدفع')),
+      appBar: AppBar(title: const Text('الدفع'), actions: const [HelpButton(3)]),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [

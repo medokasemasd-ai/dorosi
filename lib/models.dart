@@ -263,6 +263,7 @@ class Settings {
     this.themeColor = 0,
     this.themeMode = 0,
     this.teacherName = '',
+    this.scheduleView = 0,
   });
 
   bool remindStart;
@@ -286,6 +287,9 @@ class Settings {
   /// Shown in the greeting on the schedule page.
   String teacherName;
 
+  /// How the week is shown on the schedule page: 0 day cards, 1 a list.
+  int scheduleView;
+
   Map<String, dynamic> toJson() => {
     'remindStart': remindStart,
     'remindEnd': remindEnd,
@@ -297,6 +301,7 @@ class Settings {
     'themeColor': themeColor,
     'themeMode': themeMode,
     'teacherName': teacherName,
+    'scheduleView': scheduleView,
   };
 
   factory Settings.fromJson(Map<String, dynamic> j) => Settings(
@@ -310,7 +315,27 @@ class Settings {
     themeColor: (j['themeColor'] ?? 0) as int,
     themeMode: (j['themeMode'] ?? 0) as int,
     teacherName: (j['teacherName'] ?? '') as String,
+    scheduleView: (j['scheduleView'] ?? 0) as int,
   );
+}
+
+/// A holiday: no lessons from [from] to [to] (dates, inclusive). Without
+/// [to] the break lasts until the teacher ends it.
+class Break {
+  Break({required this.from, this.to});
+
+  DateTime from;
+  DateTime? to;
+
+  bool covers(DateTime day) {
+    final d = dateOnly(day);
+    return !d.isBefore(dateOnly(from)) && (to == null || !d.isAfter(dateOnly(to!)));
+  }
+
+  Map<String, dynamic> toJson() => {'from': dateKey(from), 'to': to == null ? null : dateKey(to!)};
+
+  factory Break.fromJson(Map<String, dynamic> j) =>
+      Break(from: parseDateKey(j['from'] as String), to: j['to'] == null ? null : parseDateKey(j['to'] as String));
 }
 
 // ---- date helpers ----

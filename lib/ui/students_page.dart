@@ -8,6 +8,7 @@ import 'common.dart';
 import 'payment_sheet.dart';
 import 'student_form.dart';
 import 'student_page.dart';
+import 'help.dart';
 import 'theme.dart';
 
 enum _Filter { all, paid, unpaid, review, archived }
@@ -59,7 +60,7 @@ class _StudentsPageState extends State<StudentsPage> {
     shown.sort((a, b) => a.student.name.compareTo(b.student.name));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('الطلاب')),
+      appBar: AppBar(title: const Text('الطلاب'), actions: const [HelpButton(1)]),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: null,
         onPressed: () => openStudentForm(context),

@@ -5,6 +5,8 @@ import '../models.dart';
 import '../store.dart';
 import 'common.dart';
 import 'group_form.dart';
+import 'breaks.dart';
+import 'help.dart';
 import 'theme.dart';
 
 class GroupsPage extends StatefulWidget {
@@ -29,7 +31,17 @@ class _GroupsPageState extends State<GroupsPage> {
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('الحصص والمجموعات')),
+      appBar: AppBar(
+        title: const Text('الحصص والمجموعات'),
+        actions: [
+          IconButton(
+            tooltip: 'إجازة',
+            onPressed: () => showBreakSheet(context),
+            icon: const Icon(Icons.beach_access_outlined),
+          ),
+          const HelpButton(2),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: null,
         onPressed: () => openGroupForm(context),
@@ -39,6 +51,7 @@ class _GroupsPageState extends State<GroupsPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
         children: [
+          const BreakBanner(),
           if (d.groups.isEmpty)
             EmptyState(
               icon: Icons.class_outlined,

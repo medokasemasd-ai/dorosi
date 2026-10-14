@@ -142,6 +142,38 @@ class AppStore extends ChangeNotifier {
     await _commit();
   }
 
+  /// Ends every current class, e.g. at the end of the school year.
+  Future<void> archiveAllGroups() async {
+    final today = dateOnly(DateTime.now());
+    for (final g in data.groups.where((g) => !g.archived)) {
+      g.archived = true;
+      g.archivedAt = today;
+    }
+    await _commit();
+  }
+
+  Future<void> addBreak(DateTime from, DateTime? to) async {
+    data.breaks.add(Break(from: dateOnly(from), to: to == null ? null : dateOnly(to)));
+    data.breaks.sort((a, b) => a.from.compareTo(b.from));
+    await _commit();
+  }
+
+  /// Ends a holiday: lessons are back from [today] on.
+  Future<void> endBreak(Break b, DateTime today) async {
+    final t = dateOnly(today);
+    if (!dateOnly(b.from).isBefore(t)) {
+      data.breaks.remove(b);
+    } else {
+      b.to = DateTime(t.year, t.month, t.day - 1);
+    }
+    await _commit();
+  }
+
+  Future<void> removeBreak(Break b) async {
+    data.breaks.remove(b);
+    await _commit();
+  }
+
   Future<void> deleteGroup(Group g) async {
     data.groups.removeWhere((e) => e.id == g.id);
     for (final s in data.students) {

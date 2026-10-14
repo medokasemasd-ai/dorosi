@@ -161,4 +161,24 @@ void main() {
     expect(find.text('أحمد'), findsOneWidget);
     expect(reminders, 0);
   });
+
+  testWidgets('schedule switches to a list and every tab explains itself', (t) async {
+    final store = await _open(t);
+    for (final (i, tab) in ['الجدول', 'الطلاب', 'الحصص', 'الدفع', 'التذكيرات'].indexed) {
+      await t.tap(find.text(tab).last);
+      await t.pumpAndSettle();
+      await t.tap(find.byTooltip('شرح').hitTestable().first);
+      await t.pumpAndSettle();
+      expect(find.text('تبويب $tab'), findsOneWidget, reason: 'tab $i');
+      await t.tap(find.text('تمام'));
+      await t.pumpAndSettle();
+    }
+    await t.tap(find.text('الجدول').last);
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('عرض قائمة'));
+    await t.pumpAndSettle();
+    expect(store.data.settings.scheduleView, 1);
+    await t.scrollUntilVisible(find.text('النهارده'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('النهارده'), findsOneWidget);
+  });
 }
