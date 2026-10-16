@@ -181,4 +181,22 @@ void main() {
     await t.scrollUntilVisible(find.text('النهارده'), 200, scrollable: find.byType(Scrollable).first);
     expect(find.text('النهارده'), findsOneWidget);
   });
+
+  testWidgets('a phone number is saved with the chosen country code', (t) async {
+    final store = await _open(t);
+    await t.tap(find.text('الطلاب'));
+    await t.pumpAndSettle();
+    await t.longPress(find.text('أحمد'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تعديل الاسم والبيانات'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const ValueKey('country')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('السعودية'));
+    await t.pumpAndSettle();
+    await t.enterText(find.widgetWithText(TextFormField, 'رقم الموبايل (اختياري)'), '0501234567');
+    await t.tap(find.text('حفظ'));
+    await t.pumpAndSettle();
+    expect(store.data.students.single.phone, '+966501234567');
+  });
 }

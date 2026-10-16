@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../format.dart';
 import '../models.dart';
+import '../phone.dart';
+import '../services/contacts.dart';
 import '../store.dart';
 import 'common.dart';
 import 'group_form.dart';
@@ -81,7 +83,8 @@ class StudentForm extends StatefulWidget {
 class _StudentFormState extends State<StudentForm> {
   final _form = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.student?.name);
-  late final _phone = TextEditingController(text: widget.student?.phone);
+  final _phone = TextEditingController();
+  String _code = '20';
   late final _stage = TextEditingController(text: widget.student?.stage);
   late final _family = TextEditingController(text: widget.student?.family);
   late final _notes = TextEditingController(text: widget.student?.notes);
@@ -98,6 +101,9 @@ class _StudentFormState extends State<StudentForm> {
     _init = true;
     final d = StoreScope.read(context).data;
     final s = widget.student;
+    final (code, local) = splitPhone(s?.phone ?? '', fallback: d.settings.currency == 'ر.س' ? '966' : '20');
+    _code = code;
+    _phone.text = local;
     if (s != null) {
       _groups.addAll(d.groupsOf(s, includeArchived: true).map((g) => g.id));
       s.priceOverrides.forEach((gid, p) => _prices[gid] = TextEditingController(text: _plain(p)));
@@ -136,13 +142,31 @@ class _StudentFormState extends State<StudentForm> {
               validator: (v) => (v ?? '').trim().isEmpty ? 'اكتب اسم الطالب' : null,
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'رقم الموبايل (اختياري)',
-                prefixIcon: Icon(Icons.phone_outlined),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _phone,
+                    keyboardType: TextInputType.phone,
+                    textDirection: TextDirection.ltr,
+                    // An empty number is usually in the phone's contacts already.
+                    onTap: () {
+                      if (_phone.text.trim().isEmpty) _pickContact();
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'رقم الموبايل (اختياري)',
+                      prefixIcon: IconButton(
+                        tooltip: 'اختار من الأسماء',
+                        icon: const Icon(Icons.contacts_outlined),
+                        onPressed: _pickContact,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _CountryButton(code: _code, onChanged: (c) => setState(() => _code = c)),
+              ],
             ),
             const SizedBox(height: 12),
             _Suggest(controller: _stage, label: 'المرحلة / الصف', options: stages, hint: 'مثال: الثالث الثانوي'),
@@ -246,13 +270,29 @@ class _StudentFormState extends State<StudentForm> {
     );
   }
 
+  Future<void> _pickContact() async {
+    try {
+      final c = await pickContactPhone();
+      if (c == null || !mounted) return;
+      final (code, local) = splitPhone(c.number, fallback: _code);
+      setState(() {
+        if (code.isNotEmpty) _code = code;
+        _phone.text = local;
+        if (_name.text.trim().isEmpty) _name.text = c.name;
+      });
+      FocusManager.instance.primaryFocus?.unfocus();
+    } catch (_) {
+      if (mounted) toast(context, 'مقدرتش أفتح الأسماء، اكتب الرقم بإيدك');
+    }
+  }
+
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
     final store = StoreScope.read(context);
     final s = widget.student ?? Student(id: store.newId(), name: '');
     s
       ..name = _name.text.trim()
-      ..phone = westernDigits(_phone.text.trim())
+      ..phone = joinPhone(_code, _phone.text)
       ..stage = _stage.text.trim()
       ..family = _family.text.trim()
       ..notes = _notes.text.trim()
@@ -316,3 +356,62 @@ int _longest(Group g) => [
 ].fold(0, (a, b) => a > b ? a : b);
 
 String _plain(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+
+/// The country code in front of a phone number; tap to pick another country.
+class _CountryButton extends StatelessWidget {
+  const _CountryButton({required this.code, required this.onChanged});
+
+  final String code;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final flag = countries.where((c) => c.$3 == code).map((c) => c.$2).firstOrNull ?? '🌍';
+    return SizedBox(
+      height: 56,
+      child: OutlinedButton(
+        key: const ValueKey('country'),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        onPressed: () async {
+          final picked = await showModalBottomSheet<String>(
+            context: context,
+            showDragHandle: true,
+            isScrollControlled: true,
+            backgroundColor: AppColors.card,
+            builder: (c) => SafeArea(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+                    child: Text('كود الدولة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  ),
+                  for (final (name, f, cc) in countries)
+                    ListTile(
+                      leading: Text(f, style: const TextStyle(fontSize: 24)),
+                      title: Text(name),
+                      trailing: Text('+$cc', textDirection: TextDirection.ltr),
+                      selected: cc == code,
+                      onTap: () => Navigator.pop(c, cc),
+                    ),
+                ],
+              ),
+            ),
+          );
+          if (picked != null) onChanged(picked);
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(flag, style: const TextStyle(fontSize: 20)),
+            const SizedBox(width: 4),
+            Text('+$code', textDirection: TextDirection.ltr),
+          ],
+        ),
+      ),
+    );
+  }
+}

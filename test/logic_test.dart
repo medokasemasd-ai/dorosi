@@ -4,6 +4,7 @@ import 'package:dorosi/data.dart';
 import 'package:dorosi/demo.dart';
 import 'package:dorosi/format.dart';
 import 'package:dorosi/models.dart';
+import 'package:dorosi/phone.dart';
 import 'package:dorosi/services/reminders.dart';
 import 'package:dorosi/store.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -424,5 +425,16 @@ void main() {
 
     await store.archiveAllGroups();
     expect(store.data.groups.every((g) => g.archived), isTrue);
+  });
+
+  test('phone numbers keep their country code', () {
+    expect(splitPhone('01012345678'), ('20', '1012345678'));
+    expect(splitPhone('٠١٠١٢٣٤٥٦٧٨'), ('20', '1012345678'));
+    expect(splitPhone('+966 50 123 4567'), ('966', '501234567'));
+    expect(splitPhone('00971501234567'), ('971', '501234567'));
+    expect(splitPhone('0501234567', fallback: '966'), ('966', '501234567'));
+    expect(joinPhone('20', '010 1234 5678'), '+201012345678');
+    expect(joinPhone('966', '0501234567'), '+966501234567');
+    expect(joinPhone('20', ''), '');
   });
 }
