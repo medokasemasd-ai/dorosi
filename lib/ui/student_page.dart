@@ -77,34 +77,26 @@ class _StudentPageState extends State<StudentPage> {
                     children: [
                       Text(s.name, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
                       if (s.stage.isNotEmpty) Text(s.stage, style: TextStyle(color: AppColors.muted)),
-                      if (s.phone.isNotEmpty)
-                        Text(
-                          arDigits(s.phone),
-                          textDirection: TextDirection.ltr,
-                          style: TextStyle(color: AppColors.muted),
-                        ),
                       if (s.archived) Pill('من الطلاب السابقين', fg: AppColors.muted, bg: AppColors.soft),
                     ],
                   ),
                 ),
-                if (s.phone.isNotEmpty) ...[
-                  IconButton.filledTonal(
-                    tooltip: 'اتصال',
-                    onPressed: () => launchUrl(Uri(scheme: 'tel', path: s.phone)),
-                    icon: const Icon(Icons.call_outlined),
-                  ),
-                  IconButton.filledTonal(
-                    tooltip: 'واتساب',
-                    onPressed: () => launchUrl(
-                      Uri.parse('https://wa.me/${whatsappNumber(s.phone)}'),
-                      mode: LaunchMode.externalApplication,
-                    ),
-                    icon: const Icon(Icons.chat_outlined),
-                  ),
-                ],
               ],
             ),
           ),
+          if (s.phone.isNotEmpty || s.parentPhone.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Panel(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              child: Column(
+                children: [
+                  if (s.phone.isNotEmpty) _PhoneRow(label: 'الطالب', phone: s.phone),
+                  if (s.phone.isNotEmpty && s.parentPhone.isNotEmpty) const Divider(height: 1),
+                  if (s.parentPhone.isNotEmpty) _PhoneRow(label: 'ولي الأمر', phone: s.parentPhone),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           const SectionTitle('الحساب'),
           Panel(
@@ -500,6 +492,49 @@ class _Count extends StatelessWidget {
         if (sub != null) Text(sub!, style: TextStyle(fontSize: 12, color: color)),
         Text(label, style: TextStyle(fontSize: 12, color: AppColors.muted)),
       ],
+    );
+  }
+}
+
+/// A phone number with call and WhatsApp buttons.
+class _PhoneRow extends StatelessWidget {
+  const _PhoneRow({required this.label, required this.phone});
+
+  final String label;
+  final String phone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(color: AppColors.muted, fontSize: 12)),
+                Text(
+                  arDigits(phone),
+                  textDirection: TextDirection.ltr,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          IconButton.filledTonal(
+            tooltip: 'اتصال ب$label',
+            onPressed: () => launchUrl(Uri(scheme: 'tel', path: phone)),
+            icon: const Icon(Icons.call_outlined),
+          ),
+          IconButton.filledTonal(
+            tooltip: 'واتساب $label',
+            onPressed: () =>
+                launchUrl(Uri.parse('https://wa.me/${whatsappNumber(phone)}'), mode: LaunchMode.externalApplication),
+            icon: const Icon(Icons.chat_outlined),
+          ),
+        ],
+      ),
     );
   }
 }

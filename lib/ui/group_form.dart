@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../format.dart';
 import '../models.dart';
+import '../phone.dart';
 import '../store.dart';
 import 'common.dart';
 import 'student_form.dart';
@@ -449,7 +450,7 @@ class _GroupFormState extends State<GroupForm> {
     final s = Student(
       id: store.newId(),
       name: name.text.trim(),
-      phone: westernDigits(phone.text.trim()),
+      phone: joinPhone(splitPhone(phone.text).$1, splitPhone(phone.text).$2),
       family: family.text.trim(),
       stage: _stage.text.trim(),
       joinedAt: dateOnly(_start),

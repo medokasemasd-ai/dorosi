@@ -83,8 +83,8 @@ class StudentForm extends StatefulWidget {
 class _StudentFormState extends State<StudentForm> {
   final _form = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.student?.name);
-  final _phone = TextEditingController();
-  String _code = '20';
+  final _phone = _Phone();
+  final _parentPhone = _Phone();
   late final _stage = TextEditingController(text: widget.student?.stage);
   late final _family = TextEditingController(text: widget.student?.family);
   late final _notes = TextEditingController(text: widget.student?.notes);
@@ -101,9 +101,9 @@ class _StudentFormState extends State<StudentForm> {
     _init = true;
     final d = StoreScope.read(context).data;
     final s = widget.student;
-    final (code, local) = splitPhone(s?.phone ?? '', fallback: d.settings.currency == 'ر.س' ? '966' : '20');
-    _code = code;
-    _phone.text = local;
+    final fallback = d.settings.currency == 'ر.س' ? '966' : '20';
+    _phone.load(s?.phone ?? '', fallback);
+    _parentPhone.load(s?.parentPhone ?? '', fallback);
     if (s != null) {
       _groups.addAll(d.groupsOf(s, includeArchived: true).map((g) => g.id));
       s.priceOverrides.forEach((gid, p) => _prices[gid] = TextEditingController(text: _plain(p)));
@@ -142,32 +142,9 @@ class _StudentFormState extends State<StudentForm> {
               validator: (v) => (v ?? '').trim().isEmpty ? 'اكتب اسم الطالب' : null,
             ),
             const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _phone,
-                    keyboardType: TextInputType.phone,
-                    textDirection: TextDirection.ltr,
-                    // An empty number is usually in the phone's contacts already.
-                    onTap: () {
-                      if (_phone.text.trim().isEmpty) _pickContact();
-                    },
-                    decoration: InputDecoration(
-                      labelText: 'رقم الموبايل (اختياري)',
-                      prefixIcon: IconButton(
-                        tooltip: 'اختار من الأسماء',
-                        icon: const Icon(Icons.contacts_outlined),
-                        onPressed: _pickContact,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                _CountryButton(code: _code, onChanged: (c) => setState(() => _code = c)),
-              ],
-            ),
+            _phoneField(_phone, 'رقم الطالب (اختياري)', fillName: true),
+            const SizedBox(height: 12),
+            _phoneField(_parentPhone, 'رقم ولي الأمر (اختياري)'),
             const SizedBox(height: 12),
             _Suggest(controller: _stage, label: 'المرحلة / الصف', options: stages, hint: 'مثال: الثالث الثانوي'),
             const SizedBox(height: 12),
@@ -270,15 +247,42 @@ class _StudentFormState extends State<StudentForm> {
     );
   }
 
-  Future<void> _pickContact() async {
+  Widget _phoneField(_Phone p, String label, {bool fillName = false}) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Expanded(
+        child: TextFormField(
+          controller: p.text,
+          keyboardType: TextInputType.phone,
+          textDirection: TextDirection.ltr,
+          // An empty number is usually in the phone's contacts already.
+          onTap: () {
+            if (p.text.text.trim().isEmpty) _pickContact(p, fillName: fillName);
+          },
+          decoration: InputDecoration(
+            labelText: label,
+            prefixIcon: IconButton(
+              tooltip: 'اختار من الأسماء',
+              icon: const Icon(Icons.contacts_outlined),
+              onPressed: () => _pickContact(p, fillName: fillName),
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(width: 8),
+      _CountryButton(code: p.code, onChanged: (c) => setState(() => p.code = c)),
+    ],
+  );
+
+  Future<void> _pickContact(_Phone p, {bool fillName = false}) async {
     try {
       final c = await pickContactPhone();
       if (c == null || !mounted) return;
-      final (code, local) = splitPhone(c.number, fallback: _code);
+      final (code, local) = splitPhone(c.number, fallback: p.code);
       setState(() {
-        if (code.isNotEmpty) _code = code;
-        _phone.text = local;
-        if (_name.text.trim().isEmpty) _name.text = c.name;
+        if (code.isNotEmpty) p.code = code;
+        p.text.text = local;
+        if (fillName && _name.text.trim().isEmpty) _name.text = c.name;
       });
       FocusManager.instance.primaryFocus?.unfocus();
     } catch (_) {
@@ -292,7 +296,8 @@ class _StudentFormState extends State<StudentForm> {
     final s = widget.student ?? Student(id: store.newId(), name: '');
     s
       ..name = _name.text.trim()
-      ..phone = joinPhone(_code, _phone.text)
+      ..phone = _phone.value
+      ..parentPhone = _parentPhone.value
       ..stage = _stage.text.trim()
       ..family = _family.text.trim()
       ..notes = _notes.text.trim()
@@ -414,4 +419,18 @@ class _CountryButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A phone number being edited: its country code and the local part.
+class _Phone {
+  final text = TextEditingController();
+  String code = '20';
+
+  void load(String phone, String fallback) {
+    final (c, local) = splitPhone(phone, fallback: fallback);
+    code = c;
+    text.text = local;
+  }
+
+  String get value => joinPhone(code, text.text);
 }

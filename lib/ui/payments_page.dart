@@ -219,7 +219,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
               title: const Text('تسجيل دفع'),
               onTap: () => Navigator.pop(c, 'pay'),
             ),
-            if (s.phone.isNotEmpty && r.bill.remaining > 0)
+            if (s.billingPhone.isNotEmpty && r.bill.remaining > 0)
               ListTile(
                 leading: const Icon(Icons.chat_outlined),
                 title: const Text('تذكير بالمبلغ على واتساب'),
@@ -244,7 +244,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
             '${r.bill.lessonsUnpaid > 0 ? '${unitsCount(r.bill.lessonsUnpaid)} لسه مدفوعتش، ' : ''}'
             'الباقي ${fmtMoney(r.bill.remaining, currency)}. شكرًا';
         await launchUrl(
-          Uri.parse('https://wa.me/${whatsappNumber(s.phone)}?text=${Uri.encodeComponent(text)}'),
+          Uri.parse('https://wa.me/${whatsappNumber(s.billingPhone)}?text=${Uri.encodeComponent(text)}'),
           mode: LaunchMode.externalApplication,
         );
       case 'open':

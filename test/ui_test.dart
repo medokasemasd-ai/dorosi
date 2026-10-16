@@ -182,7 +182,7 @@ void main() {
     expect(find.text('النهارده'), findsOneWidget);
   });
 
-  testWidgets('a phone number is saved with the chosen country code', (t) async {
+  testWidgets('student and parent numbers are saved with their country codes', (t) async {
     final store = await _open(t);
     await t.tap(find.text('الطلاب'));
     await t.pumpAndSettle();
@@ -190,13 +190,21 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('تعديل الاسم والبيانات'));
     await t.pumpAndSettle();
-    await t.tap(find.byKey(const ValueKey('country')));
+    await t.tap(find.byKey(const ValueKey('country')).first);
     await t.pumpAndSettle();
     await t.tap(find.text('السعودية'));
     await t.pumpAndSettle();
-    await t.enterText(find.widgetWithText(TextFormField, 'رقم الموبايل (اختياري)'), '0501234567');
+    await t.enterText(find.widgetWithText(TextFormField, 'رقم الطالب (اختياري)'), '0501234567');
+    await t.enterText(find.widgetWithText(TextFormField, 'رقم ولي الأمر (اختياري)'), '01012345678');
     await t.tap(find.text('حفظ'));
     await t.pumpAndSettle();
-    expect(store.data.students.single.phone, '+966501234567');
+    final s = store.data.students.single;
+    expect(s.phone, '+966501234567');
+    expect(s.parentPhone, '+201012345678');
+    expect(s.billingPhone, s.parentPhone);
+    await t.tap(find.text('أحمد'));
+    await t.pumpAndSettle();
+    expect(find.text('ولي الأمر'), findsOneWidget);
+    expect(find.byTooltip('واتساب ولي الأمر'), findsOneWidget);
   });
 }

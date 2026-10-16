@@ -159,6 +159,7 @@ class Student {
     required this.id,
     required this.name,
     this.phone = '',
+    this.parentPhone = '',
     this.stage = '',
     this.family = '',
     this.notes = '',
@@ -173,6 +174,9 @@ class Student {
   String id;
   String name;
   String phone;
+
+  /// The parent's number, for calls and payment reminders.
+  String parentPhone;
   String stage;
 
   /// Students sharing the same family name are siblings.
@@ -188,10 +192,14 @@ class Student {
   bool archived;
   DateTime joinedAt;
 
+  /// Where payment reminders go: the parent if known, else the student.
+  String get billingPhone => parentPhone.isNotEmpty ? parentPhone : phone;
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
     'phone': phone,
+    'parentPhone': parentPhone,
     'stage': stage,
     'family': family,
     'notes': notes,
@@ -205,6 +213,7 @@ class Student {
     id: j['id'] as String,
     name: j['name'] as String,
     phone: (j['phone'] ?? '') as String,
+    parentPhone: (j['parentPhone'] ?? '') as String,
     stage: (j['stage'] ?? '') as String,
     family: (j['family'] ?? '') as String,
     notes: (j['notes'] ?? '') as String,
