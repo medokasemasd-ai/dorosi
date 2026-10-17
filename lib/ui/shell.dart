@@ -4,7 +4,6 @@ import '../store.dart';
 import 'groups_page.dart';
 import 'payments_page.dart';
 import 'schedule_page.dart';
-import 'settings_page.dart';
 import 'theme.dart';
 import 'students_page.dart';
 
@@ -27,13 +26,7 @@ class _ShellState extends State<Shell> {
     return Scaffold(
       body: IndexedStack(
         index: _tab,
-        children: [
-          SchedulePage(onOpenTab: (i) => setState(() => _tab = i)),
-          const StudentsPage(),
-          const GroupsPage(),
-          const PaymentsPage(),
-          const SettingsPage(),
-        ],
+        children: [const SchedulePage(), const StudentsPage(), const GroupsPage(), const PaymentsPage()],
       ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
@@ -83,11 +76,6 @@ class _ShellState extends State<Shell> {
                 icon: Icon(Icons.payments_outlined),
                 selectedIcon: Icon(Icons.payments),
                 label: 'الدفع',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.notifications_none),
-                selectedIcon: Icon(Icons.notifications),
-                label: 'التذكيرات',
               ),
             ],
           ),

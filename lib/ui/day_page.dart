@@ -126,36 +126,17 @@ class LessonCard extends StatelessWidget {
                   const PopupMenuItem(value: 'move', child: Text('نقل الحصة ليوم أو معاد تاني')),
                   const PopupMenuItem(value: 'extra', child: Text('إضافة حصة زيادة (تعويض)')),
                   if (l.extra) const PopupMenuItem(value: 'remove', child: Text('حذف الحصة الزيادة دي')),
+                  CheckedPopupMenuItem(
+                    value: 'remindStart',
+                    checked: g.remindStart,
+                    child: const Text('تذكير البداية'),
+                  ),
+                  CheckedPopupMenuItem(value: 'remindEnd', checked: g.remindEnd, child: const Text('تذكير النهاية')),
                   const PopupMenuItem(value: 'edit', child: Text('تعديل المواعيد الثابتة')),
                 ],
               ),
             ],
           ),
-          if (!l.cancelled) ...[
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsetsDirectional.only(end: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _ReminderToggle(
-                      label: 'تذكير البداية',
-                      on: g.remindStart,
-                      onChanged: (v) => store.setGroupReminder(g, start: v),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _ReminderToggle(
-                      label: 'تذكير النهاية',
-                      on: g.remindEnd,
-                      onChanged: (v) => store.setGroupReminder(g, end: v),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
           const SizedBox(height: 6),
           if (members.isEmpty)
             Padding(
@@ -165,7 +146,6 @@ class LessonCard extends StatelessWidget {
           for (final s in members)
             _StudentRow(
               student: s,
-              status: d.accountFor(s, now).status,
               absent: d.isAbsent(l, s.id),
               showAttendance: happened && !l.cancelled,
               onToggleAbsent: () => store.toggleAbsent(l, s.id),
@@ -180,6 +160,10 @@ class LessonCard extends StatelessWidget {
 Future<void> lessonAction(BuildContext context, Lesson l, String v) async {
   final store = StoreScope.read(context);
   switch (v) {
+    case 'remindStart':
+      await store.setGroupReminder(l.group, start: !l.group.remindStart);
+    case 'remindEnd':
+      await store.setGroupReminder(l.group, end: !l.group.remindEnd);
     case 'edit':
       await openGroupForm(context, group: l.group);
     case 'cancel':
@@ -220,62 +204,15 @@ Future<(DateTime, int)?> pickDayAndTime(BuildContext context, String title, Date
   return (dateOnly(d), t.hour * 60 + t.minute);
 }
 
-class _ReminderToggle extends StatelessWidget {
-  const _ReminderToggle({required this.label, required this.on, required this.onChanged});
-
-  final String label;
-  final bool on;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: on ? AppColors.primarySoft : AppColors.card,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: on ? BorderSide.none : BorderSide(color: AppColors.line),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => onChanged(!on),
-        child: SizedBox(
-          height: 42,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                on ? Icons.notifications_active_outlined : Icons.notifications_off_outlined,
-                size: 18,
-                color: on ? AppColors.onPrimarySoft : AppColors.muted,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: on ? FontWeight.w600 : FontWeight.w400,
-                  color: on ? AppColors.onPrimarySoft : AppColors.muted,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _StudentRow extends StatelessWidget {
   const _StudentRow({
     required this.student,
-    required this.status,
     required this.absent,
     required this.showAttendance,
     required this.onToggleAbsent,
   });
 
   final Student student;
-  final PayStatus status;
   final bool absent;
   final bool showAttendance;
   final VoidCallback onToggleAbsent;
@@ -311,9 +248,7 @@ class _StudentRow extends StatelessWidget {
                 ),
                 child: Text(absent ? 'غاب' : 'حضر'),
               ),
-              const SizedBox(width: 4),
             ],
-            StatusPill(status),
           ],
         ),
       ),

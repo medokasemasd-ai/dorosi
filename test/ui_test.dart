@@ -21,10 +21,19 @@ Future<AppStore> _open(WidgetTester t) async {
   return store;
 }
 
+/// Scrolls the settings page until [text] shows, then taps it.
+Future<void> _tapInSettings(WidgetTester t, String text) async {
+  final list = find.descendant(of: find.byType(SettingsPage), matching: find.byType(Scrollable)).first;
+  await t.scrollUntilVisible(find.text(text), 200, scrollable: list);
+  await t.pumpAndSettle();
+  await t.tap(find.text(text));
+  await t.pumpAndSettle();
+}
+
 void main() {
   testWidgets('currency can be changed to riyal and dollar', (t) async {
     final store = await _open(t);
-    await t.tap(find.text('التذكيرات'));
+    await t.tap(find.byTooltip('الإعدادات'));
     await t.pumpAndSettle();
     await t.scrollUntilVisible(
       find.textContaining('دولار'),
@@ -124,7 +133,7 @@ void main() {
 
   testWidgets('colour and dark mode can be changed from settings', (t) async {
     final store = await _open(t);
-    await t.tap(find.text('التذكيرات'));
+    await t.tap(find.byTooltip('الإعدادات'));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('accent-2')));
     await t.pumpAndSettle();
@@ -135,7 +144,7 @@ void main() {
     expect(AppColors.dark, isTrue);
     expect(Theme.of(t.element(find.text('ليلي'))).brightness, Brightness.dark);
     await t.enterText(find.widgetWithText(TextField, 'اسمك (للترحيب في الجدول)'), 'أستاذ محمد');
-    await t.tap(find.text('الجدول'));
+    await t.tap(find.byType(BackButton));
     await t.pumpAndSettle();
     expect(find.textContaining('يا أستاذ محمد'), findsOneWidget);
   });
@@ -144,11 +153,13 @@ void main() {
     final store = await _open(t);
     var reminders = 0;
     store.onChanged = (_) => reminders++;
-    await t.tap(find.text('التذكيرات'));
+    await t.tap(find.byTooltip('الإعدادات'));
     await t.pumpAndSettle();
-    await t.tap(find.text('اعرض بيانات تجريبية'));
-    await t.pumpAndSettle();
+    await _tapInSettings(t, 'المزيد');
+    await _tapInSettings(t, 'اعرض بيانات تجريبية');
     expect(store.showcase, isTrue);
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
     expect(find.text('وضع العرض: دي بيانات تجريبية'), findsOneWidget);
     await t.tap(find.text('الطلاب'));
     await t.pumpAndSettle();
@@ -162,9 +173,9 @@ void main() {
     expect(reminders, 0);
   });
 
-  testWidgets('schedule switches to a list and every tab explains itself', (t) async {
+  testWidgets('home shows the lessons of today, the week can be a list, and every tab explains itself', (t) async {
     final store = await _open(t);
-    for (final (i, tab) in ['الجدول', 'الطلاب', 'الحصص', 'الدفع', 'التذكيرات'].indexed) {
+    for (final (i, tab) in ['الجدول', 'الطلاب', 'الحصص', 'الدفع'].indexed) {
       await t.tap(find.text(tab).last);
       await t.pumpAndSettle();
       await t.tap(find.byTooltip('شرح').hitTestable().first);
@@ -175,10 +186,33 @@ void main() {
     }
     await t.tap(find.text('الجدول').last);
     await t.pumpAndSettle();
+    await t.tap(find.byTooltip('الإعدادات'));
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('شرح').hitTestable().last);
+    await t.pumpAndSettle();
+    expect(find.text('صفحة الإعدادات'), findsOneWidget);
+    await t.tap(find.text('تمام'));
+    await t.pumpAndSettle();
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
+    expect(find.text('حصص النهارده'), findsNothing); // no classes yet
+    store.data.groups.add(
+      Group(
+        id: 'g',
+        name: 'مجموعة',
+        slots: [WeeklySlot(weekday: DateTime.now().weekday, startMin: 23 * 60, durationMin: 60)],
+        studentIds: ['s1'],
+      ),
+    );
+    await store.updateSettings((_) {});
+    await t.pumpAndSettle();
+    expect(find.text('حصص النهارده'), findsOneWidget);
+    expect(find.text('مجموعة'), findsWidgets);
+    await t.tap(find.text('الأسبوع كله'));
+    await t.pumpAndSettle();
     await t.tap(find.byTooltip('عرض قائمة'));
     await t.pumpAndSettle();
     expect(store.data.settings.scheduleView, 1);
-    await t.scrollUntilVisible(find.text('النهارده'), 200, scrollable: find.byType(Scrollable).first);
     expect(find.text('النهارده'), findsOneWidget);
   });
 
@@ -189,6 +223,9 @@ void main() {
     await t.longPress(find.text('أحمد'));
     await t.pumpAndSettle();
     await t.tap(find.text('تعديل الاسم والبيانات'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('country')), findsNothing);
+    await t.tap(find.text('خيارات إضافية'));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('country')).first);
     await t.pumpAndSettle();

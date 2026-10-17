@@ -31,26 +31,10 @@ class SettingsPage extends StatelessWidget {
     final next = store.data.nextLesson(DateTime.now());
 
     return Scaffold(
-      appBar: AppBar(title: const Text('التذكيرات والإعدادات'), actions: const [HelpButton(4)]),
+      appBar: AppBar(title: const Text('الإعدادات'), actions: const [HelpButton(4)]),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
-          _WidgetPreview(
-            title: next?.group.name,
-            time: next == null ? null : '${dayLabel(next.date, DateTime.now())} · ${fmtTime(next.startMin)}',
-          ),
-          const SizedBox(height: 16),
-          const SectionTitle('وضع العرض'),
-          Panel(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: SwitchListTile(
-              value: store.showcase,
-              onChanged: store.setShowcase,
-              title: const Text('اعرض بيانات تجريبية'),
-              subtitle: const Text('لما تفرّج حد على التطبيق: يشوف طلاب وحصص وهمية، وبياناتك تفضل مخفية ومحفوظة.'),
-            ),
-          ),
-          const SizedBox(height: 20),
           const SectionTitle('شكل التطبيق'),
           const _Look(),
           const SizedBox(height: 20),
@@ -129,7 +113,7 @@ class SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'كل حصة ليها كمان زرار تشغيل وإيقاف للتذكير من صفحة اليوم.',
+            'وكل حصة تقدر تقفل أو تشغّل تذكيرها من قائمة ⋮ اللي على الحصة.',
             style: TextStyle(color: AppColors.muted, fontSize: 13),
           ),
           const SizedBox(height: 8),
@@ -140,79 +124,6 @@ class SettingsPage extends StatelessWidget {
             },
             icon: const Icon(Icons.notifications_active_outlined),
             label: const Text('جرّب إشعار دلوقتي'),
-          ),
-          const SizedBox(height: 20),
-          const SectionTitle('ويدجت الشاشة الرئيسية'),
-          Panel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'الويدجت بيعرض الحصة الجاية على الشاشة الرئيسية للموبايل ويتحدث لوحده.\n'
-                  'لإضافته: اضغط مطولًا على مكان فاضي في الشاشة الرئيسية، اختار "الأدوات" أو Widgets، ودوّر على "دروسي".',
-                  style: TextStyle(height: 1.6),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () => _pinWidget(context),
-                  icon: const Icon(Icons.widgets_outlined),
-                  label: const Text('أضف الويدجت للشاشة'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          const SectionTitle('نسخة احتياطية'),
-          Panel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'البيانات محفوظة على الموبايل بس. اعمل نسخة احتياطية كل فترة وابعتها لنفسك على واتساب أو Drive، '
-                  'عشان لو غيرت الموبايل ترجّع كل حاجة.',
-                  style: TextStyle(height: 1.6),
-                ),
-                const SizedBox(height: 12),
-                FilledButton.tonalIcon(
-                  onPressed: () => _export(context, store),
-                  icon: const Icon(Icons.upload_outlined),
-                  label: const Text('حفظ نسخة احتياطية'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _import(context, store),
-                  icon: const Icon(Icons.download_outlined),
-                  label: const Text('استرجاع من نسخة'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          const SectionTitle('التحديثات'),
-          Panel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  appBuild.isEmpty ? 'نسخة تجريبية' : 'النسخة اللي عندك: رقم ${arNum(int.parse(appBuild))}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'لو فيه نسخة أحدث، نزّلها وسطّبها فوق دي وبياناتك هتفضل زي ما هي.',
-                  style: TextStyle(color: AppColors.muted, fontSize: 13),
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  onPressed: () => launchUrl(
-                    Uri.parse('https://github.com/medokasemasd-ai/dorosi/releases/latest'),
-                    mode: LaunchMode.externalApplication,
-                  ),
-                  icon: const Icon(Icons.system_update_outlined),
-                  label: const Text('شوف آخر نسخة'),
-                ),
-              ],
-            ),
           ),
           const SizedBox(height: 20),
           const SectionTitle('العملة'),
@@ -226,6 +137,113 @@ class SettingsPage extends StatelessWidget {
                   onSelected: (_) => store.updateSettings((x) => x.currency = c),
                 ),
             ],
+          ),
+          const SizedBox(height: 20),
+          Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              key: const ValueKey('more'),
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: EdgeInsets.zero,
+              expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+              title: const Text('المزيد', style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Text(
+                'وضع العرض، الويدجت، النسخة الاحتياطية، التحديثات',
+                style: TextStyle(color: AppColors.muted, fontSize: 12),
+              ),
+              children: [
+                const SectionTitle('وضع العرض'),
+                Panel(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: SwitchListTile(
+                    value: store.showcase,
+                    onChanged: store.setShowcase,
+                    title: const Text('اعرض بيانات تجريبية'),
+                    subtitle: const Text(
+                      'لما تفرّج حد على التطبيق: يشوف طلاب وحصص وهمية، وبياناتك تفضل مخفية ومحفوظة.',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const SectionTitle('ويدجت الشاشة الرئيسية'),
+                _WidgetPreview(
+                  title: next?.group.name,
+                  time: next == null ? null : '${dayLabel(next.date, DateTime.now())} · ${fmtTime(next.startMin)}',
+                ),
+                const SizedBox(height: 10),
+                Panel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'الويدجت بيعرض الحصة الجاية على الشاشة الرئيسية للموبايل ويتحدث لوحده.\n'
+                        'لإضافته: اضغط مطولًا على مكان فاضي في الشاشة الرئيسية، اختار "الأدوات" أو Widgets، ودوّر على "دروسي".',
+                        style: TextStyle(height: 1.6),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: () => _pinWidget(context),
+                        icon: const Icon(Icons.widgets_outlined),
+                        label: const Text('أضف الويدجت للشاشة'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const SectionTitle('نسخة احتياطية'),
+                Panel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'البيانات محفوظة على الموبايل بس. اعمل نسخة احتياطية كل فترة وابعتها لنفسك على واتساب أو Drive، '
+                        'عشان لو غيرت الموبايل ترجّع كل حاجة.',
+                        style: TextStyle(height: 1.6),
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton.tonalIcon(
+                        onPressed: () => _export(context, store),
+                        icon: const Icon(Icons.upload_outlined),
+                        label: const Text('حفظ نسخة احتياطية'),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () => _import(context, store),
+                        icon: const Icon(Icons.download_outlined),
+                        label: const Text('استرجاع من نسخة'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const SectionTitle('التحديثات'),
+                Panel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        appBuild.isEmpty ? 'نسخة تجريبية' : 'النسخة اللي عندك: رقم ${arNum(int.parse(appBuild))}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'لو فيه نسخة أحدث، نزّلها وسطّبها فوق دي وبياناتك هتفضل زي ما هي.',
+                        style: TextStyle(color: AppColors.muted, fontSize: 13),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: () => launchUrl(
+                          Uri.parse('https://github.com/medokasemasd-ai/dorosi/releases/latest'),
+                          mode: LaunchMode.externalApplication,
+                        ),
+                        icon: const Icon(Icons.system_update_outlined),
+                        label: const Text('شوف آخر نسخة'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

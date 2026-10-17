@@ -85,6 +85,7 @@ class _StudentFormState extends State<StudentForm> {
   late final _name = TextEditingController(text: widget.student?.name);
   final _phone = _Phone();
   final _parentPhone = _Phone();
+  bool _more = false;
   late final _stage = TextEditingController(text: widget.student?.stage);
   late final _family = TextEditingController(text: widget.student?.family);
   late final _notes = TextEditingController(text: widget.student?.notes);
@@ -104,6 +105,16 @@ class _StudentFormState extends State<StudentForm> {
     final fallback = d.settings.currency == 'ر.س' ? '966' : '20';
     _phone.load(s?.phone ?? '', fallback);
     _parentPhone.load(s?.parentPhone ?? '', fallback);
+    // Open the extra options when this student already uses some of them.
+    _more =
+        s != null &&
+        (s.parentPhone.isNotEmpty ||
+            s.stage.isNotEmpty ||
+            s.family.isNotEmpty ||
+            s.notes.isNotEmpty ||
+            s.priceOverrides.isNotEmpty ||
+            s.hoursOverrides.isNotEmpty ||
+            _phone.code != fallback);
     if (s != null) {
       _groups.addAll(d.groupsOf(s, includeArchived: true).map((g) => g.id));
       s.priceOverrides.forEach((gid, p) => _prices[gid] = TextEditingController(text: _plain(p)));
@@ -143,36 +154,6 @@ class _StudentFormState extends State<StudentForm> {
             ),
             const SizedBox(height: 12),
             _phoneField(_phone, 'رقم الطالب (اختياري)', fillName: true),
-            const SizedBox(height: 12),
-            _phoneField(_parentPhone, 'رقم ولي الأمر (اختياري)'),
-            const SizedBox(height: 12),
-            _Suggest(controller: _stage, label: 'المرحلة / الصف', options: stages, hint: 'مثال: الثالث الثانوي'),
-            const SizedBox(height: 12),
-            _Suggest(
-              controller: _family,
-              label: 'العائلة (للإخوات)',
-              options: families,
-              hint: 'اكتب نفس الاسم لكل الإخوات، مثال: محمود',
-            ),
-            const SizedBox(height: 12),
-            Panel(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-              onTap: () async {
-                final p = await showDatePicker(
-                  context: context,
-                  initialDate: _joined,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2100),
-                );
-                if (p != null) setState(() => _joined = p);
-              },
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.event_outlined),
-                title: const Text('الحساب يبدأ من'),
-                subtitle: Text(fmtDate(_joined)),
-              ),
-            ),
             const SizedBox(height: 20),
             SectionTitle(
               'الحصص',
@@ -202,7 +183,7 @@ class _StudentFormState extends State<StudentForm> {
                         ),
                         isThreeLine: true,
                       ),
-                      if (_groups.contains(g.id) && g.payType == PayType.perLesson && _longest(g) > 60)
+                      if (_more && _groups.contains(g.id) && g.payType == PayType.perLesson && _longest(g) > 60)
                         Padding(
                           padding: const EdgeInsetsDirectional.only(start: 12, bottom: 8),
                           child: TextField(
@@ -217,7 +198,7 @@ class _StudentFormState extends State<StudentForm> {
                             ),
                           ),
                         ),
-                      if (_groups.contains(g.id))
+                      if (_more && _groups.contains(g.id))
                         Padding(
                           padding: const EdgeInsetsDirectional.only(start: 12, bottom: 8),
                           child: TextField(
@@ -235,12 +216,55 @@ class _StudentFormState extends State<StudentForm> {
                   ),
                 ),
               ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _notes,
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: 'ملاحظات (اختياري)'),
+            const SizedBox(height: 4),
+            TextButton.icon(
+              onPressed: () => setState(() => _more = !_more),
+              icon: Icon(_more ? Icons.expand_less : Icons.expand_more),
+              label: Text(_more ? 'إخفاء الخيارات الإضافية' : 'خيارات إضافية'),
             ),
+            if (!_more)
+              Text(
+                'رقم ولي الأمر، كود الدولة، المرحلة، العيلة، سعر خاص، وغيرهم',
+                style: TextStyle(color: AppColors.muted, fontSize: 12),
+              ),
+            if (_more) ...[
+              const SizedBox(height: 8),
+              _phoneField(_parentPhone, 'رقم ولي الأمر (اختياري)'),
+              const SizedBox(height: 12),
+              _Suggest(controller: _stage, label: 'المرحلة / الصف', options: stages, hint: 'مثال: الثالث الثانوي'),
+              const SizedBox(height: 12),
+              _Suggest(
+                controller: _family,
+                label: 'العائلة (للإخوات)',
+                options: families,
+                hint: 'اكتب نفس الاسم لكل الإخوات، مثال: محمود',
+              ),
+              const SizedBox(height: 12),
+              Panel(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                onTap: () async {
+                  final p = await showDatePicker(
+                    context: context,
+                    initialDate: _joined,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2100),
+                  );
+                  if (p != null) setState(() => _joined = p);
+                },
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.event_outlined),
+                  title: const Text('الحساب يبدأ من'),
+                  subtitle: Text(fmtDate(_joined)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _notes,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'ملاحظات (اختياري)'),
+              ),
+            ],
           ],
         ),
       ),
@@ -269,8 +293,10 @@ class _StudentFormState extends State<StudentForm> {
           ),
         ),
       ),
-      const SizedBox(width: 8),
-      _CountryButton(code: p.code, onChanged: (c) => setState(() => p.code = c)),
+      if (_more) ...[
+        const SizedBox(width: 8),
+        _CountryButton(code: p.code, onChanged: (c) => setState(() => p.code = c)),
+      ],
     ],
   );
 

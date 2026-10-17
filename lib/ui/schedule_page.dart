@@ -11,19 +11,19 @@ import 'day_page.dart';
 import 'group_form.dart';
 import 'breaks.dart';
 import 'help.dart';
+import 'settings_page.dart';
 import 'theme.dart';
 
 class SchedulePage extends StatefulWidget {
-  const SchedulePage({super.key, required this.onOpenTab});
-
-  final void Function(int tab) onOpenTab;
+  const SchedulePage({super.key});
 
   @override
   State<SchedulePage> createState() => _SchedulePageState();
 }
 
+/// The home page: today's lessons with attendance, and the other days of the week a tap away.
 class _SchedulePageState extends State<SchedulePage> {
-  late DateTime _week = weekStart(DateTime.now());
+  DateTime? _picked;
   late Timer _tick;
 
   @override
@@ -44,12 +44,12 @@ class _SchedulePageState extends State<SchedulePage> {
     final store = StoreScope.of(context);
     final d = store.data;
     final now = DateTime.now();
-    final next = d.nextLesson(now);
-    final days = [for (var i = 0; i < 7; i++) DateTime(_week.year, _week.month, _week.day + i)];
-    final perDay = {for (final day in days) day: d.lessonsOn(day).where((l) => !l.cancelled).toList()};
-    final totalLessons = perDay.values.fold<int>(0, (a, l) => a + l.length);
-    final isThisWeek = _week == weekStart(now);
-    final listView = d.settings.scheduleView == 1;
+    final today = dateOnly(now);
+    final day = _picked ?? today;
+    final week = weekStart(today);
+    final days = [for (var i = 0; i < 7; i++) DateTime(week.year, week.month, week.day + i)];
+    final lessons = d.lessonsOn(day);
+    final isToday = day == today;
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -60,24 +60,34 @@ class _SchedulePageState extends State<SchedulePage> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
           children: [
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    [
-                      now.hour < 12 ? 'صباح الخير' : 'مساء الخير',
-                      if (d.settings.teacherName.trim().isNotEmpty) 'يا ${d.settings.teacherName.trim()}',
-                    ].join(' '),
-                    style: TextStyle(color: AppColors.muted, fontSize: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        [
+                          now.hour < 12 ? 'صباح الخير' : 'مساء الخير',
+                          if (d.settings.teacherName.trim().isNotEmpty) 'يا ${d.settings.teacherName.trim()}',
+                        ].join(' '),
+                        style: TextStyle(color: AppColors.muted, fontSize: 14),
+                      ),
+                      Text(fmtDate(now), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+                    ],
                   ),
                 ),
                 const HelpButton(0),
+                IconButton(
+                  tooltip: 'الإعدادات',
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage())),
+                ),
               ],
             ),
-            Text(fmtDate(now), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             const BreakBanner(),
             if (d.groups.isEmpty)
               Panel(
@@ -91,74 +101,209 @@ class _SchedulePageState extends State<SchedulePage> {
                   ),
                 ),
               )
-            else
-              _NextLessonCard(lesson: next, now: now),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isThisWeek ? 'أيام الأسبوع' : 'أسبوع ${fmtShortDate(_week)}',
-                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            else ...[
+              _NextLessonCard(lesson: d.nextLesson(now), now: now),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  for (final x in days)
+                    Expanded(
+                      child: _DayChip(
+                        day: x,
+                        selected: x == day,
+                        isToday: x == today,
+                        busy: d.lessonsOn(x).any((l) => !l.cancelled),
+                        onTap: () => setState(() => _picked = x),
                       ),
-                      Text(
-                        '${fmtShortDate(days.first)} – ${fmtShortDate(days.last)} · ${lessonsCount(totalLessons)}',
-                        style: TextStyle(color: AppColors.muted, fontSize: 13),
-                      ),
-                    ],
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      isToday ? 'حصص النهارده' : 'حصص ${dayLabel(day, now)}',
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                    ),
                   ),
+                  TextButton.icon(
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WeekPage())),
+                    icon: const Icon(Icons.calendar_view_week_outlined, size: 18),
+                    label: const Text('الأسبوع كله'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              if (lessons.isEmpty)
+                Panel(
+                  child: Text(
+                    d.onBreak(day) != null ? 'إجازة 🏖️' : 'مفيش حصص في اليوم ده',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.muted),
+                  ),
+                )
+              else
+                for (final l in lessons)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: LessonCard(lesson: l),
+                  ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One day of this week in the strip above today's lessons.
+class _DayChip extends StatelessWidget {
+  const _DayChip({
+    required this.day,
+    required this.selected,
+    required this.isToday,
+    required this.busy,
+    required this.onTap,
+  });
+
+  final DateTime day;
+  final bool selected;
+  final bool isToday;
+  final bool busy;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = selected ? AppColors.onPrimary : (isToday ? AppColors.primary : AppColors.ink);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Material(
+        color: selected ? AppColors.primary : AppColors.card,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              children: [
+                Text(
+                  weekdayName(day.weekday).replaceAll('ال', ''),
+                  maxLines: 1,
+                  overflow: TextOverflow.fade,
+                  softWrap: false,
+                  style: TextStyle(fontSize: 11, color: fg),
                 ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  tooltip: listView ? 'عرض مربعات' : 'عرض قائمة',
-                  onPressed: () => store.updateSettings((x) => x.scheduleView = listView ? 0 : 1),
-                  icon: Icon(listView ? Icons.grid_view_outlined : Icons.view_agenda_outlined),
+                Text(
+                  arNum(day.day),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: fg),
                 ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'الأسبوع السابق',
-                  onPressed: () => setState(() => _week = DateTime(_week.year, _week.month, _week.day - 7)),
-                  icon: const Icon(Icons.chevron_left),
-                ),
-                if (!isThisWeek)
-                  TextButton(onPressed: () => setState(() => _week = weekStart(now)), child: const Text('الحالي')),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  tooltip: 'الأسبوع التالي',
-                  onPressed: () => setState(() => _week = DateTime(_week.year, _week.month, _week.day + 7)),
-                  icon: const Icon(Icons.chevron_right),
+                const SizedBox(height: 2),
+                CircleAvatar(
+                  radius: 2.5,
+                  backgroundColor: busy ? (selected ? AppColors.onPrimary : AppColors.primary) : Colors.transparent,
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            if (listView)
-              for (final day in days) _DayRow(day: day, lessons: perDay[day]!, data: d, now: now)
-            else
-              for (var i = 0; i < 7; i += 2)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: _DayCard(day: days[i], lessons: perDay[days[i]]!, data: d, now: now),
-                        ),
-                        if (i + 1 < 7) ...[
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _DayCard(day: days[i + 1], lessons: perDay[days[i + 1]]!, data: d, now: now),
-                          ),
-                        ],
-                      ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The whole week, as day cards or a list.
+class WeekPage extends StatefulWidget {
+  const WeekPage({super.key});
+
+  @override
+  State<WeekPage> createState() => _WeekPageState();
+}
+
+class _WeekPageState extends State<WeekPage> {
+  late DateTime _week = weekStart(DateTime.now());
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final d = store.data;
+    final now = DateTime.now();
+    final days = [for (var i = 0; i < 7; i++) DateTime(_week.year, _week.month, _week.day + i)];
+    final perDay = {for (final day in days) day: d.lessonsOn(day).where((l) => !l.cancelled).toList()};
+    final totalLessons = perDay.values.fold<int>(0, (a, l) => a + l.length);
+    final isThisWeek = _week == weekStart(now);
+    final listView = d.settings.scheduleView == 1;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('الأسبوع')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isThisWeek ? 'أيام الأسبوع' : 'أسبوع ${fmtShortDate(_week)}',
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                     ),
+                    Text(
+                      '${fmtShortDate(days.first)} – ${fmtShortDate(days.last)} · ${lessonsCount(totalLessons)}',
+                      style: TextStyle(color: AppColors.muted, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: listView ? 'عرض مربعات' : 'عرض قائمة',
+                onPressed: () => store.updateSettings((x) => x.scheduleView = listView ? 0 : 1),
+                icon: Icon(listView ? Icons.grid_view_outlined : Icons.view_agenda_outlined),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'الأسبوع السابق',
+                onPressed: () => setState(() => _week = DateTime(_week.year, _week.month, _week.day - 7)),
+                icon: const Icon(Icons.chevron_left),
+              ),
+              if (!isThisWeek)
+                TextButton(onPressed: () => setState(() => _week = weekStart(now)), child: const Text('الحالي')),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'الأسبوع التالي',
+                onPressed: () => setState(() => _week = DateTime(_week.year, _week.month, _week.day + 7)),
+                icon: const Icon(Icons.chevron_right),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (listView)
+            for (final day in days) _DayRow(day: day, lessons: perDay[day]!, data: d, now: now)
+          else
+            for (var i = 0; i < 7; i += 2)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _DayCard(day: days[i], lessons: perDay[days[i]]!, data: d, now: now),
+                      ),
+                      if (i + 1 < 7) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _DayCard(day: days[i + 1], lessons: perDay[days[i + 1]]!, data: d, now: now),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-          ],
-        ),
+              ),
+        ],
       ),
     );
   }

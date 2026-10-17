@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../data.dart';
-import '../format.dart';
 import '../models.dart';
 import '../store.dart';
 import 'common.dart';
-import 'payment_sheet.dart';
 import 'student_form.dart';
 import 'student_page.dart';
 import 'help.dart';
 import 'theme.dart';
 
-enum _Filter { all, paid, unpaid, review, archived }
+enum _Filter { all, unpaid, archived }
 
 class StudentsPage extends StatefulWidget {
   const StudentsPage({super.key});
@@ -37,21 +35,12 @@ class _StudentsPageState extends State<StudentsPage> {
       if (_filter == _Filter.archived ? !s.archived : s.archived) continue;
       rows.add(_Row(s, d.accountFor(s, now), d.groupsOf(s)));
     }
-    final billed = rows.where((r) => r.bill.status != PayStatus.none && !r.student.archived).toList();
-    final paidCount = billed.where((r) => r.bill.status == PayStatus.paid).length;
-    final unpaidCount = billed.length - paidCount;
-    final totalDue = billed.fold<double>(0, (a, r) => a + r.bill.due);
-    final totalPaid = rows.fold<double>(0, (a, r) => a + r.bill.paid);
 
     var shown = rows.where((r) {
       if (_q.isNotEmpty && !r.student.name.contains(_q) && !r.student.family.contains(_q)) return false;
       switch (_filter) {
-        case _Filter.paid:
-          return r.bill.status == PayStatus.paid;
         case _Filter.unpaid:
           return r.bill.status == PayStatus.unpaid || r.bill.status == PayStatus.partial;
-        case _Filter.review:
-          return r.groups.any((g) => g.kind == GroupKind.review);
         case _Filter.all:
         case _Filter.archived:
           return true;
@@ -70,39 +59,6 @@ class _StudentsPageState extends State<StudentsPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
         children: [
-          Panel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _Stat(label: 'دفعوا', value: arNum(paidCount), color: AppColors.paid),
-                    ),
-                    Expanded(
-                      child: _Stat(label: 'لسه', value: arNum(unpaidCount), color: AppColors.unpaid),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(999),
-                  child: LinearProgressIndicator(
-                    value: totalDue <= 0 ? 0 : (totalPaid / totalDue).clamp(0, 1).toDouble(),
-                    minHeight: 10,
-                    backgroundColor: AppColors.unpaidSoft,
-                    color: const Color(0xFF16A34A),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'المحصّل ${fmtMoney(totalPaid, currency)} من ${fmtMoney(totalDue, currency)}',
-                  style: TextStyle(color: AppColors.muted, fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
           TextField(
             onChanged: (v) => setState(() => _q = v.trim()),
             decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'ابحث باسم الطالب أو العائلة'),
@@ -183,11 +139,6 @@ class _StudentsPageState extends State<StudentsPage> {
                   style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
               ),
-              if (k.isNotEmpty)
-                Text(
-                  'الباقي ${fmtMoney(families[k]!.fold<double>(0, (a, r) => a + r.bill.remaining), currency)}',
-                  style: TextStyle(color: AppColors.muted, fontSize: 13),
-                ),
             ],
           ),
         ),
@@ -221,28 +172,14 @@ class _StudentsPageState extends State<StudentsPage> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
-                  if (status == PayStatus.partial || status == PayStatus.unpaid)
-                    Text(
-                      'عليه ${r.bill.lessonsUnpaid > 0 ? '${unitsCount(r.bill.lessonsUnpaid)} · ' : ''}${fmtMoney(r.bill.remaining, currency)}',
-                      style: TextStyle(fontSize: 12, color: AppColors.unpaid),
-                    ),
                 ],
               ),
             ),
             const SizedBox(width: 8),
             if (status == PayStatus.unpaid || status == PayStatus.partial)
-              TextButton(
-                onPressed: () => showPaymentSheet(context, s),
-                style: TextButton.styleFrom(
-                  backgroundColor: AppColors.unpaidSoft,
-                  foregroundColor: AppColors.unpaid,
-                  minimumSize: const Size(44, 38),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: const Text('تسجيل الدفع', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-              )
-            else
-              StatusPill(status),
+              Pill('عليه فلوس', fg: AppColors.unpaid, bg: AppColors.unpaidSoft)
+            else if (status == PayStatus.paid)
+              Pill('خالص', fg: AppColors.paid, bg: AppColors.paidSoft),
           ],
         ),
       ),
@@ -253,12 +190,8 @@ class _StudentsPageState extends State<StudentsPage> {
     switch (f) {
       case _Filter.all:
         return 'الكل';
-      case _Filter.paid:
-        return 'دفعوا';
       case _Filter.unpaid:
-        return 'لسه';
-      case _Filter.review:
-        return 'مراجعة';
+        return 'عليهم فلوس';
       case _Filter.archived:
         return 'السابقين';
     }
@@ -271,26 +204,4 @@ class _Row {
   final Student student;
   final Account bill;
   final List<Group> groups;
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value, required this.color});
-
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(color: AppColors.muted, fontSize: 13)),
-        Text(
-          value,
-          style: TextStyle(color: color, fontSize: 26, fontWeight: FontWeight.w700),
-        ),
-      ],
-    );
-  }
 }
