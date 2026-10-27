@@ -10,6 +10,7 @@ import 'common.dart';
 import 'day_page.dart';
 import 'group_form.dart';
 import 'breaks.dart';
+import 'groups_page.dart';
 import 'help.dart';
 import 'settings_page.dart';
 import 'theme.dart';
@@ -87,7 +88,8 @@ class _SchedulePageState extends State<SchedulePage> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
+            const TabHint('حصص النهارده، وتعلّم مين حضر ومين غاب.'),
             const BreakBanner(),
             if (d.groups.isEmpty)
               Panel(
@@ -149,6 +151,30 @@ class _SchedulePageState extends State<SchedulePage> {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: LessonCard(lesson: l),
                   ),
+              const SizedBox(height: 8),
+              Panel(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GroupsPage())),
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_calendar_outlined, color: AppColors.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('المواعيد الثابتة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                          Text(
+                            'مواعيد كل حصة في الأسبوع، وسعرها، والطلاب اللي فيها.',
+                            style: TextStyle(color: AppColors.muted, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_left, color: AppColors.muted),
+                  ],
+                ),
+              ),
             ],
           ],
         ),

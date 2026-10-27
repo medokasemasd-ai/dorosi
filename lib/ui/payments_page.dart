@@ -72,6 +72,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
+          const TabHint('مين عليه فلوس، وتسجيل اللي اتدفع، وتذكير ولي الأمر على واتساب.'),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(22)),

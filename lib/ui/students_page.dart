@@ -59,6 +59,7 @@ class _StudentsPageState extends State<StudentsPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
         children: [
+          const TabHint('كل طلابك. دوس على أي طالب تشوف حسابه وحضوره وتعدّل بياناته.'),
           TextField(
             onChanged: (v) => setState(() => _q = v.trim()),
             decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'ابحث باسم الطالب أو العائلة'),
@@ -156,7 +157,6 @@ class _StudentsPageState extends State<StudentsPage> {
       child: Panel(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StudentPage(studentId: s.id))),
-        onLongPress: () => showStudentActions(context, s),
         child: Row(
           children: [
             Avatar(s.name),

@@ -6,7 +6,6 @@ import '../models.dart';
 import '../store.dart';
 import 'common.dart';
 import 'group_form.dart';
-import 'student_form.dart';
 import 'student_page.dart';
 import 'theme.dart';
 
@@ -222,7 +221,6 @@ class _StudentRow extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StudentPage(studentId: student.id))),
-      onLongPress: () => showStudentActions(context, student),
       child: Padding(
         padding: const EdgeInsetsDirectional.only(top: 6, bottom: 6, end: 8),
         child: Row(

@@ -202,3 +202,18 @@ void toast(BuildContext context, String text) {
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(text)));
 }
+
+/// One line under a tab's title saying what the tab is for.
+class TabHint extends StatelessWidget {
+  const TabHint(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(text, style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.4)),
+    );
+  }
+}

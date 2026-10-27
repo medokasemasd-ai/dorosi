@@ -32,7 +32,7 @@ class _GroupsPageState extends State<GroupsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('الحصص والمجموعات'),
+        title: const Text('المواعيد الثابتة'),
         actions: [
           IconButton(
             tooltip: 'إجازة',

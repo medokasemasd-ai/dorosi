@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../store.dart';
-import 'groups_page.dart';
 import 'payments_page.dart';
 import 'schedule_page.dart';
 import 'theme.dart';
@@ -24,10 +23,7 @@ class _ShellState extends State<Shell> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
-      body: IndexedStack(
-        index: _tab,
-        children: [const SchedulePage(), const StudentsPage(), const GroupsPage(), const PaymentsPage()],
-      ),
+      body: IndexedStack(index: _tab, children: [const SchedulePage(), const StudentsPage(), const PaymentsPage()]),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -71,7 +67,6 @@ class _ShellState extends State<Shell> {
                 selectedIcon: Icon(Icons.people),
                 label: 'الطلاب',
               ),
-              NavigationDestination(icon: Icon(Icons.class_outlined), selectedIcon: Icon(Icons.class_), label: 'الحصص'),
               NavigationDestination(
                 icon: Icon(Icons.payments_outlined),
                 selectedIcon: Icon(Icons.payments),

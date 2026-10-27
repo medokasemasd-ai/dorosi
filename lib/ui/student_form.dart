@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data.dart';
 import '../format.dart';
 import '../models.dart';
 import '../phone.dart';
@@ -9,12 +10,10 @@ import 'common.dart';
 import 'group_form.dart';
 import 'theme.dart';
 
-Future<void> openStudentForm(BuildContext context, {Student? student, String? groupId}) => Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => StudentForm(student: student, groupId: groupId),
-  ),
-);
+/// Adds a new student: name, classes and number. The rest is filled in later
+/// from the student's page.
+Future<void> openStudentForm(BuildContext context, {String? groupId}) =>
+    Navigator.push(context, MaterialPageRoute(builder: (_) => StudentForm(groupId: groupId)));
 
 /// Asks before deleting [s] with all their payments. Returns true if deleted.
 Future<bool> deleteStudentAsk(BuildContext context, Student s) async {
@@ -25,55 +24,10 @@ Future<bool> deleteStudentAsk(BuildContext context, Student s) async {
   return true;
 }
 
-/// Edit / move to former students / delete, from a long press on a student anywhere.
-Future<void> showStudentActions(BuildContext context, Student s) async {
-  final v = await showModalBottomSheet<String>(
-    context: context,
-    showDragHandle: true,
-    builder: (c) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(s.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-          ),
-          ListTile(
-            leading: const Icon(Icons.edit_outlined),
-            title: const Text('تعديل الاسم والبيانات'),
-            onTap: () => Navigator.pop(c, 'edit'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.archive_outlined),
-            title: Text(s.archived ? 'رجّعه للطلاب الحاليين' : 'نقله للطلاب السابقين'),
-            onTap: () => Navigator.pop(c, 'archive'),
-          ),
-          ListTile(
-            leading: Icon(Icons.delete_outline, color: AppColors.unpaid),
-            title: Text('حذف الطالب', style: TextStyle(color: AppColors.unpaid)),
-            onTap: () => Navigator.pop(c, 'delete'),
-          ),
-        ],
-      ),
-    ),
-  );
-  if (!context.mounted) return;
-  switch (v) {
-    case 'edit':
-      await openStudentForm(context, student: s);
-    case 'archive':
-      await StoreScope.read(context).setStudentArchived(s, !s.archived);
-    case 'delete':
-      await deleteStudentAsk(context, s);
-  }
-}
-
 class StudentForm extends StatefulWidget {
-  const StudentForm({super.key, this.student, this.groupId});
+  const StudentForm({super.key, this.groupId});
 
-  final Student? student;
-
-  /// Pre-selects this class for a new student.
+  /// Pre-selects this class.
   final String? groupId;
 
   @override
@@ -82,18 +36,9 @@ class StudentForm extends StatefulWidget {
 
 class _StudentFormState extends State<StudentForm> {
   final _form = GlobalKey<FormState>();
-  late final _name = TextEditingController(text: widget.student?.name);
+  final _name = TextEditingController();
   final _phone = _Phone();
-  final _parentPhone = _Phone();
-  bool _more = false;
-  late final _stage = TextEditingController(text: widget.student?.stage);
-  late final _family = TextEditingController(text: widget.student?.family);
-  final _familyPrice = TextEditingController();
-  late final _notes = TextEditingController(text: widget.student?.notes);
-  late DateTime _joined = widget.student?.joinedAt ?? DateTime(DateTime.now().year, DateTime.now().month);
-  final Set<String> _groups = {};
-  final Map<String, TextEditingController> _prices = {};
-  final Map<String, TextEditingController> _hours = {};
+  late final Set<String> _groups = {?widget.groupId};
   bool _init = false;
 
   @override
@@ -101,43 +46,15 @@ class _StudentFormState extends State<StudentForm> {
     super.didChangeDependencies();
     if (_init) return;
     _init = true;
-    final d = StoreScope.read(context).data;
-    final s = widget.student;
-    final fallback = d.settings.currency == 'ر.س' ? '966' : '20';
-    _phone.load(s?.phone ?? '', fallback);
-    _parentPhone.load(s?.parentPhone ?? '', fallback);
-    final fp = d.familyPrices[s?.family.trim() ?? ''];
-    if (fp != null) _familyPrice.text = _plain(fp);
-    // Open the extra options when this student already uses some of them.
-    _more =
-        s != null &&
-        (s.parentPhone.isNotEmpty ||
-            s.stage.isNotEmpty ||
-            s.family.isNotEmpty ||
-            s.notes.isNotEmpty ||
-            s.priceOverrides.isNotEmpty ||
-            s.hoursOverrides.isNotEmpty ||
-            _phone.code != fallback);
-    if (s != null) {
-      _groups.addAll(d.groupsOf(s, includeArchived: true).map((g) => g.id));
-      s.priceOverrides.forEach((gid, p) => _prices[gid] = TextEditingController(text: _plain(p)));
-      s.hoursOverrides.forEach((gid, h) => _hours[gid] = TextEditingController(text: _plain(h)));
-    } else if (widget.groupId != null) {
-      _groups.add(widget.groupId!);
-    }
+    _phone.load('', _defaultCode(StoreScope.read(context).data));
   }
 
   @override
   Widget build(BuildContext context) {
-    final store = StoreScope.of(context);
-    final d = store.data;
-    final currency = d.settings.currency;
-    final groups = d.groups.where((g) => !g.archived || _groups.contains(g.id)).toList();
-    final families = {for (final s in d.students) s.family.trim()}..remove('');
-    final stages = {for (final s in d.students) s.stage.trim(), for (final g in d.groups) g.stage.trim()}..remove('');
-
+    final d = StoreScope.of(context).data;
+    final groups = d.groups.where((g) => !g.archived).toList()..sort((a, b) => a.name.compareTo(b.name));
     return Scaffold(
-      appBar: AppBar(title: Text(widget.student == null ? 'طالب جديد' : 'تعديل الطالب')),
+      appBar: AppBar(title: const Text('طالب جديد')),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -152,14 +69,12 @@ class _StudentFormState extends State<StudentForm> {
             TextFormField(
               controller: _name,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(labelText: 'اسم الطالب'),
+              decoration: const InputDecoration(labelText: '١. اسم الطالب'),
               validator: (v) => (v ?? '').trim().isEmpty ? 'اكتب اسم الطالب' : null,
             ),
-            const SizedBox(height: 12),
-            _phoneField(_phone, 'رقم الطالب (اختياري)', fillName: true),
             const SizedBox(height: 20),
             SectionTitle(
-              'الحصص',
+              '٢. بياخد أنهي حصة؟',
               trailing: TextButton.icon(
                 onPressed: () => openGroupForm(context),
                 icon: const Icon(Icons.add),
@@ -172,157 +87,98 @@ class _StudentFormState extends State<StudentForm> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Panel(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
-                  child: Column(
-                    children: [
-                      CheckboxListTile(
-                        contentPadding: EdgeInsets.zero,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        value: _groups.contains(g.id),
-                        onChanged: (v) => setState(() => v == true ? _groups.add(g.id) : _groups.remove(g.id)),
-                        title: Text(g.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(
-                          '${scheduleSummary(g)}\n${fmtMoney(g.currentPrice, currency)} ${g.payType == PayType.perLesson ? 'للساعة' : 'في الشهر'}',
-                        ),
-                        isThreeLine: true,
-                      ),
-                      if (_more && _groups.contains(g.id) && g.payType == PayType.perLesson && _longest(g) > 60)
-                        Padding(
-                          padding: const EdgeInsetsDirectional.only(start: 12, bottom: 8),
-                          child: TextField(
-                            controller: _hours.putIfAbsent(g.id, () => TextEditingController()),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: InputDecoration(
-                              isDense: true,
-                              labelText: 'ساعات الطالب ده في الحصة (اختياري)',
-                              hintText: 'مثلًا ١ لو الحصة لكذا أخ وكل واحد ساعة',
-                              helperText: 'لو فاضية بيتحسب مدة الحصة كلها (${fmtDuration(_longest(g))})',
-                              suffixText: 'ساعة',
-                            ),
-                          ),
-                        ),
-                      if (_more && _groups.contains(g.id))
-                        Padding(
-                          padding: const EdgeInsetsDirectional.only(start: 12, bottom: 8),
-                          child: TextField(
-                            controller: _prices.putIfAbsent(g.id, () => TextEditingController()),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: InputDecoration(
-                              isDense: true,
-                              labelText: 'سعر خاص للطالب ده (اختياري)',
-                              hintText: 'مثلًا خصم الإخوات',
-                              suffixText: currency,
-                            ),
-                          ),
-                        ),
-                    ],
+                  padding: const EdgeInsets.fromLTRB(4, 0, 12, 0),
+                  child: CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: _groups.contains(g.id),
+                    onChanged: (v) => setState(() => v == true ? _groups.add(g.id) : _groups.remove(g.id)),
+                    title: Text(g.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(scheduleSummary(g)),
                   ),
                 ),
               ),
-            const SizedBox(height: 4),
-            TextButton.icon(
-              onPressed: () => setState(() => _more = !_more),
-              icon: Icon(_more ? Icons.expand_less : Icons.expand_more),
-              label: Text(_more ? 'إخفاء الخيارات الإضافية' : 'خيارات إضافية'),
+            const SizedBox(height: 12),
+            _PhoneField(phone: _phone, label: '٣. رقم الموبايل (اختياري)', onPicked: _fillName),
+            const SizedBox(height: 12),
+            Text(
+              'رقم ولي الأمر والعيلة والسعر الخاص وغيرهم تقدر تضيفهم بعدين من صفحة الطالب.',
+              style: TextStyle(color: AppColors.muted, fontSize: 12, height: 1.5),
             ),
-            if (!_more)
-              Text(
-                'رقم ولي الأمر، كود الدولة، المرحلة، العيلة، سعر خاص، وغيرهم',
-                style: TextStyle(color: AppColors.muted, fontSize: 12),
-              ),
-            if (_more) ...[
-              const SizedBox(height: 8),
-              _phoneField(_parentPhone, 'رقم ولي الأمر (اختياري)'),
-              const SizedBox(height: 12),
-              _Suggest(controller: _stage, label: 'المرحلة / الصف', options: stages, hint: 'مثال: الثالث الثانوي'),
-              const SizedBox(height: 12),
-              _Suggest(
-                controller: _family,
-                label: 'العائلة (للإخوات)',
-                options: families,
-                hint: 'اكتب نفس الاسم لكل الإخوات، مثال: محمود',
-              ),
-              ValueListenableBuilder(
-                valueListenable: _family,
-                builder: (_, v, _) => v.text.trim().isEmpty
-                    ? const SizedBox.shrink()
-                    : Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: TextField(
-                          controller: _familyPrice,
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: InputDecoration(
-                            labelText: 'سعر الحصة للإخوات مع بعض (اختياري)',
-                            hintText: 'مثلًا ٢٠٠ للتلاتة',
-                            helperText: 'لو كتبته، الإخوات يبقى ليهم حساب واحد ودفع واحد',
-                            helperMaxLines: 2,
-                            suffixText: currency,
-                          ),
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 12),
-              Panel(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                onTap: () async {
-                  final p = await showDatePicker(
-                    context: context,
-                    initialDate: _joined,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2100),
-                  );
-                  if (p != null) setState(() => _joined = p);
-                },
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.event_outlined),
-                  title: const Text('الحساب يبدأ من'),
-                  subtitle: Text(fmtDate(_joined)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _notes,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'ملاحظات (اختياري)'),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _phoneField(_Phone p, String label, {bool fillName = false}) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Expanded(
-        child: TextFormField(
-          controller: p.text,
-          keyboardType: TextInputType.phone,
-          textDirection: TextDirection.ltr,
-          // An empty number is usually in the phone's contacts already.
-          onTap: () {
-            if (p.text.text.trim().isEmpty) _pickContact(p, fillName: fillName);
-          },
-          decoration: InputDecoration(
-            labelText: label,
-            prefixIcon: IconButton(
-              tooltip: 'اختار من الأسماء',
-              icon: const Icon(Icons.contacts_outlined),
-              onPressed: () => _pickContact(p, fillName: fillName),
+  void _fillName(String name) {
+    if (_name.text.trim().isEmpty) _name.text = name;
+  }
+
+  Future<void> _save() async {
+    if (!_form.currentState!.validate()) return;
+    final store = StoreScope.read(context);
+    final s = Student(
+      id: store.newId(),
+      name: _name.text.trim(),
+      phone: _phone.value,
+      joinedAt: DateTime(DateTime.now().year, DateTime.now().month),
+    );
+    await store.saveStudent(s, _groups);
+    if (mounted) Navigator.pop(context);
+  }
+}
+
+String _defaultCode(AppData d) => d.settings.currency == 'ر.س' ? '966' : '20';
+
+/// A phone number field with the contacts picker and the country code.
+class _PhoneField extends StatefulWidget {
+  const _PhoneField({required this.phone, required this.label, this.onPicked});
+
+  final _Phone phone;
+  final String label;
+
+  /// Called with the contact's name when a number is picked from the contacts.
+  final ValueChanged<String>? onPicked;
+
+  @override
+  State<_PhoneField> createState() => _PhoneFieldState();
+}
+
+class _PhoneFieldState extends State<_PhoneField> {
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.phone;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: TextFormField(
+            controller: p.text,
+            keyboardType: TextInputType.phone,
+            textDirection: TextDirection.ltr,
+            // An empty number is usually in the phone's contacts already.
+            onTap: () {
+              if (p.text.text.trim().isEmpty) _pick();
+            },
+            decoration: InputDecoration(
+              labelText: widget.label,
+              prefixIcon: IconButton(
+                tooltip: 'اختار من الأسماء',
+                icon: const Icon(Icons.contacts_outlined),
+                onPressed: _pick,
+              ),
             ),
           ),
         ),
-      ),
-      if (_more) ...[
         const SizedBox(width: 8),
         _CountryButton(code: p.code, onChanged: (c) => setState(() => p.code = c)),
       ],
-    ],
-  );
+    );
+  }
 
-  Future<void> _pickContact(_Phone p, {bool fillName = false}) async {
+  Future<void> _pick() async {
+    final p = widget.phone;
     try {
       final c = await pickContactPhone();
       if (c == null || !mounted) return;
@@ -330,49 +186,262 @@ class _StudentFormState extends State<StudentForm> {
       setState(() {
         if (code.isNotEmpty) p.code = code;
         p.text.text = local;
-        if (fillName && _name.text.trim().isEmpty) _name.text = c.name;
       });
+      widget.onPicked?.call(c.name);
       FocusManager.instance.primaryFocus?.unfocus();
     } catch (_) {
       if (mounted) toast(context, 'مقدرتش أفتح الأسماء، اكتب الرقم بإيدك');
     }
   }
-
-  Future<void> _save() async {
-    if (!_form.currentState!.validate()) return;
-    final store = StoreScope.read(context);
-    final s = widget.student ?? Student(id: store.newId(), name: '');
-    s
-      ..name = _name.text.trim()
-      ..phone = _phone.value
-      ..parentPhone = _parentPhone.value
-      ..stage = _stage.text.trim()
-      ..family = _family.text.trim()
-      ..notes = _notes.text.trim()
-      ..joinedAt = dateOnly(_joined);
-    final fam = s.family;
-    if (fam.isNotEmpty) {
-      final fp = parseArNum(_familyPrice.text);
-      if (fp != null && fp > 0) {
-        store.data.familyPrices[fam] = fp;
-      } else {
-        store.data.familyPrices.remove(fam);
-      }
-    }
-    s.priceOverrides.clear();
-    s.hoursOverrides.clear();
-    for (final gid in _groups) {
-      final v = parseArNum(_prices[gid]?.text ?? '');
-      if (v != null && v >= 0) s.priceOverrides[gid] = v;
-      final h = parseArNum(_hours[gid]?.text ?? '');
-      if (h != null && h > 0) s.hoursOverrides[gid] = h;
-    }
-    await store.saveStudent(s, _groups);
-    if (mounted) Navigator.pop(context);
-  }
 }
 
-/// A text field with tap-to-fill suggestions from values used before.
+// ---- editing one thing at a time, from the student's page ----
+
+Set<String> _classIds(AppData d, Student s) => {for (final g in d.groupsOf(s, includeArchived: true)) g.id};
+
+/// A small sheet with a title, the fields, and a save button.
+Future<void> _editSheet(
+  BuildContext context,
+  String title,
+  List<Widget> Function(StateSetter setState) fields,
+  Future<void> Function() save,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: AppColors.card,
+    builder: (c) => StatefulBuilder(
+      builder: (c, setState) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.viewInsetsOf(c).bottom),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 14),
+              ...fields(setState),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () async {
+                  await save();
+                  if (c.mounted) Navigator.pop(c);
+                },
+                child: const Text('حفظ'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Edits one text detail of [s]: name, stage or notes.
+Future<void> editStudentText(
+  BuildContext context,
+  Student s, {
+  required String title,
+  required String initial,
+  required void Function(String v) apply,
+  bool multiline = false,
+  Set<String> suggestions = const {},
+}) {
+  final store = StoreScope.read(context);
+  final ctl = TextEditingController(text: initial);
+  return _editSheet(
+    context,
+    title,
+    (setState) => [
+      TextField(controller: ctl, autofocus: true, maxLines: multiline ? 4 : 1),
+      if (suggestions.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final o in suggestions.take(8))
+              ActionChip(label: Text(o), onPressed: () => ctl.text = o, visualDensity: VisualDensity.compact),
+          ],
+        ),
+      ],
+    ],
+    () async {
+      apply(ctl.text.trim());
+      await store.saveStudent(s, _classIds(store.data, s));
+    },
+  );
+}
+
+/// Edits the student's or the parent's number.
+Future<void> editStudentPhone(BuildContext context, Student s, {bool parent = false}) {
+  final store = StoreScope.read(context);
+  final p = _Phone()..load(parent ? s.parentPhone : s.phone, _defaultCode(store.data));
+  return _editSheet(
+    context,
+    parent ? 'رقم ولي الأمر' : 'رقم الطالب',
+    (setState) => [_PhoneField(phone: p, label: 'الرقم')],
+    () async {
+      if (parent) {
+        s.parentPhone = p.value;
+      } else {
+        s.phone = p.value;
+      }
+      await store.saveStudent(s, _classIds(store.data, s));
+    },
+  );
+}
+
+/// Picks the classes [s] takes.
+Future<void> editStudentClasses(BuildContext context, Student s) {
+  final store = StoreScope.read(context);
+  final d = store.data;
+  final chosen = _classIds(d, s);
+  final groups = d.groups.where((g) => !g.archived || chosen.contains(g.id)).toList()
+    ..sort((a, b) => a.name.compareTo(b.name));
+  return _editSheet(
+    context,
+    'الحصص اللي بياخدها',
+    (setState) => [
+      if (groups.isEmpty) Text('لسه مفيش حصص.', style: TextStyle(color: AppColors.muted)),
+      for (final g in groups)
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          value: chosen.contains(g.id),
+          onChanged: (v) => setState(() => v == true ? chosen.add(g.id) : chosen.remove(g.id)),
+          title: Text(g.name),
+          subtitle: Text(scheduleSummary(g)),
+        ),
+    ],
+    () => store.saveStudent(s, chosen),
+  );
+}
+
+/// A special price for [s] in each class, and their own hours in a long shared lesson.
+Future<void> editStudentPrices(BuildContext context, Student s) {
+  final store = StoreScope.read(context);
+  final d = store.data;
+  final currency = d.settings.currency;
+  final groups = d.groupsOf(s);
+  final prices = {for (final g in groups) g.id: TextEditingController(text: s.priceOverrides[g.id]?.let(_plain) ?? '')};
+  final hours = {for (final g in groups) g.id: TextEditingController(text: s.hoursOverrides[g.id]?.let(_plain) ?? '')};
+  return _editSheet(
+    context,
+    'سعر خاص',
+    (setState) => [
+      Text('سيبها فاضية لو الطالب بيدفع سعر الحصة العادي.', style: TextStyle(color: AppColors.muted, fontSize: 13)),
+      const SizedBox(height: 10),
+      if (groups.isEmpty) Text('الطالب مش في أي حصة.', style: TextStyle(color: AppColors.muted)),
+      for (final g in groups) ...[
+        Text(g.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: prices[g.id],
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            isDense: true,
+            labelText: 'السعر للطالب ده',
+            hintText: 'العادي ${fmtMoney(g.currentPrice, currency)}',
+            suffixText: currency,
+          ),
+        ),
+        if (g.payType == PayType.perLesson && _longest(g) > 60) ...[
+          const SizedBox(height: 8),
+          TextField(
+            controller: hours[g.id],
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              isDense: true,
+              labelText: 'ساعات الطالب ده في الحصة',
+              hintText: 'مثلًا ١ لو الحصة لكذا أخ',
+              helperText: 'لو فاضية بيتحسب مدة الحصة كلها (${fmtDuration(_longest(g))})',
+              suffixText: 'ساعة',
+            ),
+          ),
+        ],
+        const SizedBox(height: 14),
+      ],
+    ],
+    () async {
+      s.priceOverrides.clear();
+      s.hoursOverrides.clear();
+      for (final g in groups) {
+        final v = parseArNum(prices[g.id]!.text);
+        if (v != null && v >= 0) s.priceOverrides[g.id] = v;
+        final h = parseArNum(hours[g.id]!.text);
+        if (h != null && h > 0) s.hoursOverrides[g.id] = h;
+      }
+      await store.saveStudent(s, _classIds(d, s));
+    },
+  );
+}
+
+/// The family name shared by siblings, and the price of a lesson they take together.
+Future<void> editStudentFamily(BuildContext context, Student s) {
+  final store = StoreScope.read(context);
+  final d = store.data;
+  final families = {for (final o in d.students) o.family.trim()}..remove('');
+  final name = TextEditingController(text: s.family);
+  final price = TextEditingController(text: d.familyPrices[s.family.trim()]?.let(_plain) ?? '');
+  return _editSheet(
+    context,
+    'العيلة (للإخوات)',
+    (setState) => [
+      _Suggest(
+        controller: name,
+        label: 'اسم العيلة',
+        options: families,
+        hint: 'اكتب نفس الاسم لكل الإخوات، مثال: محمود',
+      ),
+      const SizedBox(height: 12),
+      TextField(
+        controller: price,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          labelText: 'سعر الحصة للإخوات مع بعض (اختياري)',
+          hintText: 'مثلًا ٢٠٠ للتلاتة',
+          helperText: 'لو كتبته، الإخوات يبقى ليهم حساب واحد ودفع واحد',
+          helperMaxLines: 2,
+          suffixText: d.settings.currency,
+        ),
+      ),
+    ],
+    () async {
+      s.family = name.text.trim();
+      if (s.family.isNotEmpty) {
+        final v = parseArNum(price.text);
+        if (v != null && v > 0) {
+          d.familyPrices[s.family] = v;
+        } else {
+          d.familyPrices.remove(s.family);
+        }
+      }
+      await store.saveStudent(s, _classIds(d, s));
+    },
+  );
+}
+
+/// The day the student's account starts.
+Future<void> editStudentStart(BuildContext context, Student s) async {
+  final store = StoreScope.read(context);
+  final p = await showDatePicker(
+    context: context,
+    helpText: 'الحساب يبدأ من',
+    initialDate: s.joinedAt,
+    firstDate: DateTime(2020),
+    lastDate: DateTime(2100),
+  );
+  if (p == null) return;
+  s.joinedAt = dateOnly(p);
+  await store.saveStudent(s, _classIds(store.data, s));
+}
+
+extension _Let<T> on T {
+  R let<R>(R Function(T) f) => f(this);
+}
+
 class _Suggest extends StatelessWidget {
   const _Suggest({required this.controller, required this.label, required this.options, this.hint});
 

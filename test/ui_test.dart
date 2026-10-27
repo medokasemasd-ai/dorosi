@@ -50,18 +50,22 @@ void main() {
     expect(store.data.settings.currency, 'ر.س');
   });
 
-  testWidgets('a student can be renamed and deleted from the students list', (t) async {
+  testWidgets('a student can be renamed from their page and deleted', (t) async {
     final store = await _open(t);
     await t.tap(find.text('الطلاب'));
     await t.pumpAndSettle();
-    await t.longPress(find.text('أحمد'));
+    await t.tap(find.text('أحمد'));
     await t.pumpAndSettle();
-    await t.tap(find.text('تعديل الاسم والبيانات'));
+    await t.scrollUntilVisible(find.byTooltip('تعديل الاسم'), 200, scrollable: find.byType(Scrollable).last);
+    await t.tap(find.byTooltip('تعديل الاسم'));
     await t.pumpAndSettle();
-    await t.enterText(find.widgetWithText(TextFormField, 'اسم الطالب'), 'أحمد علي');
+    await t.enterText(find.byType(TextField).last, 'أحمد علي');
     await t.tap(find.text('حفظ'));
     await t.pumpAndSettle();
     expect(store.data.students.single.name, 'أحمد علي');
+    await t.tap(find.byType(BackButton));
+    await t.pumpAndSettle();
+    expect(find.text('أحمد علي'), findsOneWidget);
 
     await t.tap(find.text('أحمد علي'));
     await t.pumpAndSettle();
@@ -175,7 +179,7 @@ void main() {
 
   testWidgets('home shows the lessons of today, the week can be a list, and every tab explains itself', (t) async {
     final store = await _open(t);
-    for (final (i, tab) in ['الجدول', 'الطلاب', 'الحصص', 'الدفع'].indexed) {
+    for (final (i, tab) in ['الجدول', 'الطلاب', 'الدفع'].indexed) {
       await t.tap(find.text(tab).last);
       await t.pumpAndSettle();
       await t.tap(find.byTooltip('شرح').hitTestable().first);
@@ -220,29 +224,42 @@ void main() {
     final store = await _open(t);
     await t.tap(find.text('الطلاب'));
     await t.pumpAndSettle();
-    await t.longPress(find.text('أحمد'));
+    await t.tap(find.text('أحمد'));
     await t.pumpAndSettle();
-    await t.tap(find.text('تعديل الاسم والبيانات'));
+    expect(find.text('مش مكتوب'), findsWidgets);
+    await t.scrollUntilVisible(find.byTooltip('تعديل رقم الطالب'), 200, scrollable: find.byType(Scrollable).last);
+    await t.tap(find.byTooltip('تعديل رقم الطالب'));
     await t.pumpAndSettle();
-    expect(find.byKey(const ValueKey('country')), findsNothing);
-    await t.tap(find.text('خيارات إضافية'));
-    await t.pumpAndSettle();
-    await t.tap(find.byKey(const ValueKey('country')).first);
+    await t.tap(find.byKey(const ValueKey('country')));
     await t.pumpAndSettle();
     await t.tap(find.text('السعودية'));
     await t.pumpAndSettle();
-    await t.enterText(find.widgetWithText(TextFormField, 'رقم الطالب (اختياري)'), '0501234567');
-    await t.enterText(find.widgetWithText(TextFormField, 'رقم ولي الأمر (اختياري)'), '01012345678');
+    await t.enterText(find.widgetWithText(TextFormField, 'الرقم'), '0501234567');
+    await t.tap(find.text('حفظ'));
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('تعديل رقم ولي الأمر'));
+    await t.pumpAndSettle();
+    await t.enterText(find.widgetWithText(TextFormField, 'الرقم'), '01012345678');
     await t.tap(find.text('حفظ'));
     await t.pumpAndSettle();
     final s = store.data.students.single;
     expect(s.phone, '+966501234567');
     expect(s.parentPhone, '+201012345678');
     expect(s.billingPhone, s.parentPhone);
-    await t.tap(find.text('أحمد'));
+    expect(find.byTooltip('واتساب رقم ولي الأمر'), findsOneWidget);
+  });
+
+  testWidgets('a new student needs only a name', (t) async {
+    final store = await _open(t);
+    await t.tap(find.text('الطلاب'));
     await t.pumpAndSettle();
-    expect(find.text('ولي الأمر'), findsOneWidget);
-    expect(find.byTooltip('واتساب ولي الأمر'), findsOneWidget);
+    await t.tap(find.text('طالب جديد'));
+    await t.pumpAndSettle();
+    expect(find.text('٣. رقم الموبايل (اختياري)'), findsOneWidget);
+    await t.enterText(find.byType(TextFormField).first, 'سارة');
+    await t.tap(find.text('حفظ'));
+    await t.pumpAndSettle();
+    expect(store.data.students.map((s) => s.name), contains('سارة'));
   });
 
   testWidgets('siblings with a family price are one row in payments', (t) async {

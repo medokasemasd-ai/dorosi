@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   for (final dark in [false, true]) {
-    for (final tab in ['الجدول', 'الطلاب', 'الحصص', 'الدفع', 'الإعدادات', 'الأسبوع كله']) {
+    for (final tab in ['الجدول', 'الطلاب', 'المواعيد الثابتة', 'الدفع', 'الإعدادات', 'الأسبوع كله']) {
       testWidgets('tab $tab fits a small phone${dark ? ' in dark mode' : ''}', (t) async {
         t.view.physicalSize = const Size(900, 2000);
         t.view.devicePixelRatio = 2.5;
@@ -26,6 +26,9 @@ void main() {
           await t.drag(find.byType(ListView).last, const Offset(0, -1200));
           await t.pump(const Duration(seconds: 1));
           await t.tap(find.text('المزيد'));
+        } else if (tab == 'المواعيد الثابتة') {
+          await t.scrollUntilVisible(find.text(tab), 300, scrollable: find.byType(Scrollable).first);
+          await t.tap(find.text(tab));
         } else {
           await t.tap(find.text(tab).last);
         }

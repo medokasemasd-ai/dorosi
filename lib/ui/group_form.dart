@@ -6,6 +6,7 @@ import '../phone.dart';
 import '../store.dart';
 import 'common.dart';
 import 'student_form.dart';
+import 'student_page.dart';
 import 'theme.dart';
 
 Future<void> openGroupForm(BuildContext context, {Group? group, int? weekday}) => Navigator.push(
@@ -283,7 +284,7 @@ class _GroupFormState extends State<GroupForm> {
                           tooltip: 'تعديل أو حذف',
                           onSelected: (v) => _studentAction(v, s),
                           itemBuilder: (_) => const [
-                            PopupMenuItem(value: 'edit', child: Text('تعديل الطالب')),
+                            PopupMenuItem(value: 'edit', child: Text('صفحة الطالب')),
                             PopupMenuItem(value: 'delete', child: Text('حذف الطالب')),
                           ],
                         ),
@@ -402,7 +403,7 @@ class _GroupFormState extends State<GroupForm> {
   Future<void> _studentAction(String v, Student s) async {
     if (v == 'edit') {
       final inClass = _students.contains(s.id);
-      await openStudentForm(context, student: s);
+      await Navigator.push(context, MaterialPageRoute(builder: (_) => StudentPage(studentId: s.id)));
       // Keep the tick for this class as it is in this form; it is saved with the class.
       if (mounted) setState(() => inClass ? _students.add(s.id) : _students.remove(s.id));
     } else if (v == 'delete') {

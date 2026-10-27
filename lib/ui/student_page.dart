@@ -7,7 +7,6 @@ import '../store.dart';
 import '../data.dart';
 import 'common.dart';
 import 'day_page.dart';
-import 'group_form.dart';
 import 'payment_sheet.dart';
 import 'student_form.dart';
 import 'theme.dart';
@@ -38,31 +37,10 @@ class _StudentPageState extends State<StudentPage> {
     final siblings = d.siblingsOf(s);
     final payments = d.payments.where((p) => p.studentId == s.id).toList()
       ..sort((a, b) => b.paidAt.compareTo(a.paidAt));
+    final special = groups.any((g) => s.priceOverrides.containsKey(g.id) || s.hoursOverrides.containsKey(g.id));
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(s.name),
-        actions: [
-          IconButton(
-            tooltip: 'تعديل',
-            onPressed: () => openStudentForm(context, student: s),
-            icon: const Icon(Icons.edit_outlined),
-          ),
-          PopupMenuButton<String>(
-            onSelected: (v) async {
-              if (v == 'archive') {
-                await store.setStudentArchived(s, !s.archived);
-              } else if (v == 'delete') {
-                if (await deleteStudentAsk(context, s) && context.mounted) Navigator.pop(context);
-              }
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(value: 'archive', child: Text(s.archived ? 'رجّعه للطلاب الحاليين' : 'نقله للسابقين')),
-              const PopupMenuItem(value: 'delete', child: Text('حذف الطالب')),
-            ],
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(s.name)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
@@ -84,19 +62,6 @@ class _StudentPageState extends State<StudentPage> {
               ],
             ),
           ),
-          if (s.phone.isNotEmpty || s.parentPhone.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Panel(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              child: Column(
-                children: [
-                  if (s.phone.isNotEmpty) _PhoneRow(label: 'الطالب', phone: s.phone),
-                  if (s.phone.isNotEmpty && s.parentPhone.isNotEmpty) const Divider(height: 1),
-                  if (s.parentPhone.isNotEmpty) _PhoneRow(label: 'ولي الأمر', phone: s.parentPhone),
-                ],
-              ),
-            ),
-          ],
           const SizedBox(height: 16),
           SectionTitle(account.family == null ? 'الحساب' : 'حساب ${account.label}'),
           Panel(
@@ -178,6 +143,92 @@ class _StudentPageState extends State<StudentPage> {
             ),
           ),
           const SizedBox(height: 16),
+          const SectionTitle('البيانات'),
+          Text('دوس على ✏️ جنب أي معلومة عشان تعدّلها.', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          const SizedBox(height: 8),
+          Panel(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            child: Column(
+              children: [
+                _InfoRow(
+                  label: 'الاسم',
+                  value: s.name,
+                  onEdit: () => editStudentText(
+                    context,
+                    s,
+                    title: 'اسم الطالب',
+                    initial: s.name,
+                    apply: (v) {
+                      if (v.isNotEmpty) s.name = v;
+                    },
+                  ),
+                ),
+                _InfoRow(
+                  label: 'رقم الطالب',
+                  value: s.phone.isEmpty ? '' : arDigits(s.phone),
+                  ltr: true,
+                  phone: s.phone,
+                  onEdit: () => editStudentPhone(context, s),
+                ),
+                _InfoRow(
+                  label: 'رقم ولي الأمر',
+                  value: s.parentPhone.isEmpty ? '' : arDigits(s.parentPhone),
+                  ltr: true,
+                  phone: s.parentPhone,
+                  onEdit: () => editStudentPhone(context, s, parent: true),
+                ),
+                _InfoRow(
+                  label: 'الحصص',
+                  value: groups.map((g) => g.name).join('، '),
+                  empty: 'مش مسجل في أي حصة',
+                  onEdit: () => editStudentClasses(context, s),
+                ),
+                if (groups.isNotEmpty)
+                  _InfoRow(
+                    label: 'السعر',
+                    value: special ? 'سعر خاص' : 'سعر الحصة العادي',
+                    onEdit: () => editStudentPrices(context, s),
+                  ),
+                _InfoRow(
+                  label: 'المرحلة',
+                  value: s.stage,
+                  onEdit: () => editStudentText(
+                    context,
+                    s,
+                    title: 'المرحلة',
+                    initial: s.stage,
+                    apply: (v) => s.stage = v,
+                    suggestions: {for (final o in d.students) o.stage.trim()}..remove(''),
+                  ),
+                ),
+                _InfoRow(
+                  label: 'الإخوات',
+                  value: s.family.isEmpty ? '' : 'عيلة ${s.family}',
+                  empty: 'مش متسجل مع إخواته',
+                  onEdit: () => editStudentFamily(context, s),
+                ),
+                _InfoRow(
+                  label: 'بداية الحساب',
+                  value: '${fmtShortDate(s.joinedAt)} ${arNum(s.joinedAt.year)}',
+                  onEdit: () => editStudentStart(context, s),
+                ),
+                _InfoRow(
+                  label: 'ملاحظات',
+                  value: s.notes,
+                  last: true,
+                  onEdit: () => editStudentText(
+                    context,
+                    s,
+                    title: 'ملاحظات',
+                    initial: s.notes,
+                    multiline: true,
+                    apply: (v) => s.notes = v,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           SectionTitle(
             'الحضور',
             trailing: Row(
@@ -198,38 +249,8 @@ class _StudentPageState extends State<StudentPage> {
             ),
           ),
           _LessonLog(student: s, month: _month),
-          const SizedBox(height: 16),
-          const SectionTitle('الحصص'),
-          if (groups.isEmpty)
-            Text('مش مسجل في أي حصة', style: TextStyle(color: AppColors.muted))
-          else
-            for (final g in groups)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Panel(
-                  onTap: () => openGroupForm(context, group: g),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(g.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                            Text(scheduleSummary(g), style: TextStyle(color: AppColors.muted, fontSize: 13)),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        '${fmtMoney(s.priceOverrides[g.id] ?? g.currentPrice, currency)}'
-                        '${g.payType == PayType.perLesson ? ' / ساعة' : ' / شهر'}',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
           if (siblings.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             SectionTitle('الإخوات (${s.family})'),
             for (final o in siblings)
               Padding(
@@ -247,11 +268,6 @@ class _StudentPageState extends State<StudentPage> {
                   ),
                 ),
               ),
-          ],
-          if (s.notes.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            const SectionTitle('ملاحظات'),
-            Panel(child: Text(s.notes)),
           ],
           const SizedBox(height: 8),
           const SectionTitle('سجل المدفوعات'),
@@ -294,9 +310,9 @@ class _StudentPageState extends State<StudentPage> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => openStudentForm(context, student: s),
-                  icon: Icon(Icons.edit_outlined),
-                  label: Text('تعديل البيانات'),
+                  onPressed: () => store.setStudentArchived(s, !s.archived),
+                  icon: Icon(s.archived ? Icons.unarchive_outlined : Icons.archive_outlined),
+                  label: Text(s.archived ? 'رجّعه للحاليين' : 'نقله للسابقين'),
                 ),
               ),
               SizedBox(width: 10),
@@ -504,45 +520,74 @@ class _Count extends StatelessWidget {
   }
 }
 
-/// A phone number with call and WhatsApp buttons.
-class _PhoneRow extends StatelessWidget {
-  const _PhoneRow({required this.label, required this.phone});
+/// One detail of the student with a ✏️ button, and call and WhatsApp buttons for numbers.
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    required this.onEdit,
+    this.empty = 'مش مكتوب',
+    this.phone = '',
+    this.ltr = false,
+    this.last = false,
+  });
 
   final String label;
+  final String value;
+  final VoidCallback onEdit;
+  final String empty;
   final String phone;
+  final bool ltr;
+  final bool last;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: TextStyle(color: AppColors.muted, fontSize: 12)),
-                Text(
-                  arDigits(phone),
-                  textDirection: TextDirection.ltr,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ],
+    final row = InkWell(
+      onTap: onEdit,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: TextStyle(color: AppColors.muted, fontSize: 12)),
+                  Text(
+                    value.isEmpty ? empty : value,
+                    textDirection: ltr && value.isNotEmpty ? TextDirection.ltr : null,
+                    style: value.isEmpty
+                        ? TextStyle(color: AppColors.muted, fontSize: 14)
+                        : const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
+                ],
+              ),
             ),
-          ),
-          IconButton.filledTonal(
-            tooltip: 'اتصال ب$label',
-            onPressed: () => launchUrl(Uri(scheme: 'tel', path: phone)),
-            icon: const Icon(Icons.call_outlined),
-          ),
-          IconButton.filledTonal(
-            tooltip: 'واتساب $label',
-            onPressed: () =>
-                launchUrl(Uri.parse('https://wa.me/${whatsappNumber(phone)}'), mode: LaunchMode.externalApplication),
-            icon: const Icon(Icons.chat_outlined),
-          ),
-        ],
+            if (phone.isNotEmpty) ...[
+              IconButton(
+                tooltip: 'اتصال ب$label',
+                onPressed: () => launchUrl(Uri(scheme: 'tel', path: phone)),
+                icon: Icon(Icons.call_outlined, color: AppColors.primary),
+              ),
+              IconButton(
+                tooltip: 'واتساب $label',
+                onPressed: () => launchUrl(
+                  Uri.parse('https://wa.me/${whatsappNumber(phone)}'),
+                  mode: LaunchMode.externalApplication,
+                ),
+                icon: Icon(Icons.chat_outlined, color: AppColors.primary),
+              ),
+            ],
+            IconButton(
+              tooltip: 'تعديل $label',
+              onPressed: onEdit,
+              icon: Icon(Icons.edit_outlined, size: 20, color: AppColors.muted),
+            ),
+          ],
+        ),
       ),
     );
+    if (last) return row;
+    return Column(children: [row, const Divider(height: 1)]);
   }
 }
