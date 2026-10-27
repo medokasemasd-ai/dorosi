@@ -98,11 +98,19 @@ class _StudentPageState extends State<StudentPage> {
             ),
           ],
           const SizedBox(height: 16),
-          const SectionTitle('الحساب'),
+          SectionTitle(account.family == null ? 'الحساب' : 'حساب ${account.label}'),
           Panel(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (account.family != null) ...[
+                  Text(
+                    'حساب واحد لـ ${account.members.map((m) => m.name).join(' و')}. '
+                    'الحصة اللي بياخدوها مع بعض بـ ${fmtMoney(d.familyPrices[account.family] ?? 0, currency)}.',
+                    style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.5),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 Row(
                   children: [
                     Expanded(

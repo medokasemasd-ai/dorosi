@@ -244,4 +244,33 @@ void main() {
     expect(find.text('ولي الأمر'), findsOneWidget);
     expect(find.byTooltip('واتساب ولي الأمر'), findsOneWidget);
   });
+
+  testWidgets('siblings with a family price are one row in payments', (t) async {
+    final store = await _open(t);
+    store.data.students
+      ..single.family = 'محمود'
+      ..add(Student(id: 's2', name: 'ملك', family: 'محمود', joinedAt: DateTime(2026, 1, 1)));
+    store.data.groups.add(
+      Group(
+        id: 'g',
+        name: 'مجموعة',
+        slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 9 * 60, durationMin: 120)],
+        studentIds: ['s1', 's2'],
+        payType: PayType.perLesson,
+        prices: [PriceChange(fromMonth: '0000-00', amount: 100)],
+        createdAt: DateTime(2026, 1, 1),
+      ),
+    );
+    store.data.familyPrices['محمود'] = 200;
+    await store.updateSettings((_) {});
+    await t.tap(find.text('الدفع'));
+    await t.pumpAndSettle();
+    expect(find.text('عيلة محمود'), findsOneWidget);
+    expect(find.text('ملك'), findsNothing);
+    await t.tap(find.text('عيلة محمود'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('تسجيل دفع'));
+    await t.pumpAndSettle();
+    expect(find.text('تسجيل دفع: عيلة محمود'), findsOneWidget);
+  });
 }

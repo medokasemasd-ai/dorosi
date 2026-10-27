@@ -39,9 +39,15 @@ class _PaymentsPageState extends State<PaymentsPage> {
     final now = DateTime.now();
     final currency = d.settings.currency;
 
-    final all = [for (final s in d.students) _Row(s, d.accountFor(s, now))]
-        .where((r) => r.bill.remaining > 0 || (!r.student.archived && r.bill.status != PayStatus.none))
-        .toList();
+    // Siblings who share an account are one row.
+    final seen = <String>{};
+    final all = [
+      for (final s in d.students)
+        if (seen.add(
+          s.family.trim().isNotEmpty && (d.familyPrices[s.family.trim()] ?? 0) > 0 ? 'f:${s.family.trim()}' : s.id,
+        ))
+          _Row(s, d.accountFor(s, now)),
+    ].where((r) => r.bill.remaining > 0 || (!r.student.archived && r.bill.status != PayStatus.none)).toList();
     final owing = all.where((r) => r.bill.remaining > 0).toList();
     final rows =
         switch (_show) {
@@ -50,7 +56,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
           _Show.all => all,
         }..sort((a, b) {
           final c = b.bill.remaining.compareTo(a.bill.remaining);
-          return c != 0 ? c : a.student.name.compareTo(b.student.name);
+          return c != 0 ? c : a.bill.label.compareTo(b.bill.label);
         });
 
     double sum(Iterable<_Row> rs, double Function(Account b) f) => rs.fold<double>(0, (a, r) => a + f(r.bill));
@@ -149,7 +155,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
                   InkWell(
                     onTap: () => _actions(r, currency),
                     child: _TableRow(
-                      name: r.student.name,
+                      name: r.bill.label,
                       note: _note(r.bill),
                       due: arMoney(r.bill.paid),
                       paid: _units(r.bill.lessonsUnpaid),
@@ -190,12 +196,16 @@ class _PaymentsPageState extends State<PaymentsPage> {
   /// What the student has taken so far, under their name.
   String? _note(Account b) {
     final parts = <String>[
-      if (b.lessonsTaken > 0) 'خد ${unitsCount(b.lessonsTaken)}',
+      if (b.family != null && b.lessons.isNotEmpty) 'خدوا ${unitsCount(b.lessons.length.toDouble())}',
+      if (b.family == null && b.lessonsTaken > 0) 'خد ${unitsCount(b.lessonsTaken)}',
       if (b.unpaid.any((c) => c.month != null)) 'فيه شهري',
       if (b.credit > 0) 'دافع مقدم ${arMoney(b.credit)}',
     ];
     return parts.isEmpty ? null : parts.join(' · ');
   }
+
+  /// Where to send a reminder: the first parent or student number in the account.
+  String _phone(_Row r) => r.bill.members.map((m) => m.billingPhone).firstWhere((p) => p.isNotEmpty, orElse: () => '');
 
   String _units(double n) => n <= 0 ? '–' : arNum(double.parse(n.toStringAsFixed(1)));
 
@@ -208,7 +218,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(s.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            Text(r.bill.label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
             Text(
               r.bill.remaining > 0 ? 'الباقي ${fmtMoney(r.bill.remaining, currency)}' : 'مفيش عليه حاجة',
               style: TextStyle(color: r.bill.remaining > 0 ? AppColors.unpaid : AppColors.paid),
@@ -219,7 +229,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
               title: const Text('تسجيل دفع'),
               onTap: () => Navigator.pop(c, 'pay'),
             ),
-            if (s.billingPhone.isNotEmpty && r.bill.remaining > 0)
+            if (_phone(r).isNotEmpty && r.bill.remaining > 0)
               ListTile(
                 leading: const Icon(Icons.chat_outlined),
                 title: const Text('تذكير بالمبلغ على واتساب'),
@@ -240,11 +250,11 @@ class _PaymentsPageState extends State<PaymentsPage> {
         await showPaymentSheet(context, s);
       case 'whatsapp':
         final text =
-            'السلام عليكم، تذكير بمصاريف دروس ${s.name}: '
+            'السلام عليكم، تذكير بمصاريف دروس ${r.bill.members.map((m) => m.name).join(' و')}: '
             '${r.bill.lessonsUnpaid > 0 ? '${unitsCount(r.bill.lessonsUnpaid)} لسه مدفوعتش، ' : ''}'
             'الباقي ${fmtMoney(r.bill.remaining, currency)}. شكرًا';
         await launchUrl(
-          Uri.parse('https://wa.me/${whatsappNumber(s.billingPhone)}?text=${Uri.encodeComponent(text)}'),
+          Uri.parse('https://wa.me/${whatsappNumber(_phone(r))}?text=${Uri.encodeComponent(text)}'),
           mode: LaunchMode.externalApplication,
         );
       case 'open':
@@ -257,7 +267,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
     final lines = [
       'الباقي على الطلاب (${fmtDate(DateTime.now())})',
       for (final r in owing)
-        '• ${r.student.name}: ${fmtMoney(r.bill.remaining, currency)}'
+        '• ${r.bill.label}: ${fmtMoney(r.bill.remaining, currency)}'
             '${r.bill.lessonsUnpaid > 0 ? ' (${unitsCount(r.bill.lessonsUnpaid)})' : ''}',
       'الإجمالي: ${fmtMoney(total, currency)}',
     ];

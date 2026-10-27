@@ -20,10 +20,14 @@ Future<void> showPaymentSheet(BuildContext context, Student student) async {
   final perLesson = store.data.groupsOf(student).where((g) => g.payType == PayType.perLesson).toList();
   final first = perLesson.isEmpty ? null : perLesson.first;
   // The price of one lesson of usual length (the price is per hour).
-  final price = first == null
-      ? null
-      : (student.priceOverrides[first.id] ?? first.currentPrice) *
-            (student.hoursOverrides[first.id] ?? (first.slots.isNotEmpty ? first.slots.first.durationMin / 60 : 1));
+  final familyPrice = account.family == null ? null : store.data.familyPrices[account.family];
+  final price =
+      familyPrice ??
+      (first == null
+          ? null
+          : (student.priceOverrides[first.id] ?? first.currentPrice) *
+                (student.hoursOverrides[first.id] ??
+                    (first.slots.isNotEmpty ? first.slots.first.durationMin / 60 : 1)));
 
   final saved = await showModalBottomSheet<bool>(
     context: context,
@@ -36,7 +40,7 @@ Future<void> showPaymentSheet(BuildContext context, Student student) async {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('تسجيل دفع: ${student.name}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          Text('تسجيل دفع: ${account.label}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text(
             account.remaining > 0
@@ -100,7 +104,10 @@ Future<void> showPaymentSheet(BuildContext context, Student student) async {
   if (saved != true || !context.mounted) return;
   final after = store.data.accountFor(student, DateTime.now());
   if (account.remaining > 0 && after.remaining <= 0) {
-    await celebrate(context, '${student.name} خلّص كل اللي عليه');
+    await celebrate(
+      context,
+      account.family == null ? '${account.label} خلّص كل اللي عليه' : '${account.label} خلّصوا كل اللي عليهم',
+    );
   } else {
     toast(context, 'تم تسجيل الدفع');
   }

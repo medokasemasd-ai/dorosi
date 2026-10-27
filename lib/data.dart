@@ -12,13 +12,15 @@ class AppData {
     Set<String>? cancelled,
     Settings? settings,
     List<Break>? breaks,
+    Map<String, double>? familyPrices,
   }) : groups = groups ?? [],
        students = students ?? [],
        payments = payments ?? [],
        absences = absences ?? {},
        cancelled = cancelled ?? {},
        settings = settings ?? Settings(),
-       breaks = breaks ?? [];
+       breaks = breaks ?? [],
+       familyPrices = familyPrices ?? {};
 
   List<Group> groups;
   List<Student> students;
@@ -34,6 +36,10 @@ class AppData {
   /// Holidays with no lessons at all.
   List<Break> breaks;
 
+  /// Price of a lesson that siblings take together, by family name. Siblings
+  /// with one share a single account.
+  Map<String, double> familyPrices;
+
   static const int schemaVersion = 1;
 
   Map<String, dynamic> toJson() => {
@@ -45,6 +51,7 @@ class AppData {
     'cancelled': cancelled.toList(),
     'settings': settings.toJson(),
     'breaks': breaks.map((e) => e.toJson()).toList(),
+    'familyPrices': familyPrices,
   };
 
   factory AppData.fromJson(Map<String, dynamic> j) => AppData(
@@ -55,6 +62,7 @@ class AppData {
     cancelled: ((j['cancelled'] ?? []) as List).cast<String>().toSet(),
     settings: Settings.fromJson((j['settings'] ?? <String, dynamic>{}) as Map<String, dynamic>),
     breaks: ((j['breaks'] ?? []) as List).map((e) => Break.fromJson(e as Map<String, dynamic>)).toList(),
+    familyPrices: ((j['familyPrices'] ?? {}) as Map).map((k, v) => MapEntry(k as String, (v as num).toDouble())),
   );
 
   Student? student(String id) {
@@ -225,43 +233,79 @@ class AppData {
 // ---- running account ----
 
 extension Accounts on AppData {
+  /// Brothers and sisters of [s] who share one account, with [s] first, or
+  /// just [s] when their family has no family price.
+  List<Student> accountMembers(Student s) {
+    final fam = s.family.trim();
+    if (fam.isEmpty || (familyPrices[fam] ?? 0) <= 0) return [s];
+    return [s, ...students.where((o) => o.id != s.id && o.family.trim() == fam)];
+  }
+
   /// Everything [s] has taken since joining and everything paid, with the
-  /// payments covering the oldest lessons first.
+  /// payments covering the oldest lessons first. Siblings with a family price
+  /// share one account: a lesson they take together is charged that price once.
   Account accountFor(Student s, DateTime now) {
+    final members = accountMembers(s);
+    final fam = s.family.trim();
+    final family = fam.isNotEmpty && (familyPrices[fam] ?? 0) > 0 ? fam : null;
+    final familyPrice = family == null ? null : familyPrices[family];
+    final classes = {
+      for (final m in members) m.id: {for (final g in groupsOf(m, includeArchived: true)) g.id},
+    };
     final charges = <Charge>[];
-    final ids = {for (final g in groupsOf(s, includeArchived: true)) g.id};
     final monthsCharged = <String>{};
     final today = dateOnly(now);
     var attended = 0;
     var hours = 0.0;
-    for (var d = dateOnly(s.joinedAt); !d.isAfter(today); d = DateTime(d.year, d.month, d.day + 1)) {
+    var start = dateOnly(s.joinedAt);
+    for (final m in members) {
+      if (m.joinedAt.isBefore(start)) start = dateOnly(m.joinedAt);
+    }
+    for (var d = start; !d.isAfter(today); d = DateTime(d.year, d.month, d.day + 1)) {
       for (final l in lessonsOn(d, forBilling: true)) {
-        if (!ids.contains(l.group.id) || l.cancelled) continue;
+        if (l.cancelled) continue;
         final g = l.group;
+        final inClass = [
+          for (final m in members)
+            if (classes[m.id]!.contains(g.id) && !d.isBefore(dateOnly(m.joinedAt))) m,
+        ];
+        if (inClass.isEmpty) continue;
         final month = monthKey(d);
-        final price = s.priceOverrides[g.id] ?? g.priceFor(month);
-        final took = !l.start.isAfter(now) && !isAbsent(l, s.id);
-        final h = studentHours(s, l);
-        if (took) {
+        bool took(Student m) => !l.start.isAfter(now) && !isAbsent(l, m.id);
+        if (inClass.contains(s) && took(s)) {
           attended++;
-          hours += h;
+          hours += studentHours(s, l);
         }
         if (g.payType == PayType.monthly) {
           // A monthly class is one charge for the month, from its first lesson.
-          if (monthsCharged.add('${g.id}|$month')) charges.add(Charge(g, d, price, month: month));
+          for (final m in inClass) {
+            if (monthsCharged.add('${m.id}|${g.id}|$month')) {
+              charges.add(Charge(g, d, m.priceOverrides[g.id] ?? g.priceFor(month), month: month));
+            }
+          }
           continue;
         }
-        if (took) charges.add(Charge(g, d, price * h, lesson: l, hours: h));
+        if (familyPrice != null && inClass.length > 1) {
+          // Siblings in the same lesson pay the family price once.
+          if (inClass.any(took)) charges.add(Charge(g, d, familyPrice, lesson: l, hours: l.hours));
+          continue;
+        }
+        for (final m in inClass) {
+          if (!took(m)) continue;
+          final h = studentHours(m, l);
+          charges.add(Charge(g, d, (m.priceOverrides[g.id] ?? g.priceFor(month)) * h, lesson: l, hours: h));
+        }
       }
     }
-    final paid = payments.where((p) => p.studentId == s.id).fold<double>(0, (a, p) => a + p.amount);
+    final ids = {for (final m in members) m.id};
+    final paid = payments.where((p) => ids.contains(p.studentId)).fold<double>(0, (a, p) => a + p.amount);
     var left = paid;
     for (final c in charges) {
       final take = left < c.amount ? left : c.amount;
       c.paid = take < 0 ? 0 : take;
       left -= c.paid;
     }
-    return Account(charges, paid, attended: attended, hours: hours);
+    return Account(charges, paid, attended: attended, hours: hours, family: family, members: members);
   }
 }
 
@@ -287,10 +331,17 @@ class Charge {
 }
 
 class Account {
-  Account(this.charges, this.paid, {this.attended = 0, this.hours = 0});
+  Account(this.charges, this.paid, {this.attended = 0, this.hours = 0, this.family, this.members = const []});
 
   final List<Charge> charges;
   final double paid;
+
+  /// Set when the account is shared by siblings with a family price.
+  final String? family;
+  final List<Student> members;
+
+  /// Who the account is for: the family, or the student.
+  String get label => family == null ? members.first.name : 'عيلة $family';
 
   /// Lessons attended in all classes, monthly ones included, and their hours.
   final int attended;

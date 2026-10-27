@@ -88,6 +88,7 @@ class _StudentFormState extends State<StudentForm> {
   bool _more = false;
   late final _stage = TextEditingController(text: widget.student?.stage);
   late final _family = TextEditingController(text: widget.student?.family);
+  final _familyPrice = TextEditingController();
   late final _notes = TextEditingController(text: widget.student?.notes);
   late DateTime _joined = widget.student?.joinedAt ?? DateTime(DateTime.now().year, DateTime.now().month);
   final Set<String> _groups = {};
@@ -105,6 +106,8 @@ class _StudentFormState extends State<StudentForm> {
     final fallback = d.settings.currency == 'ر.س' ? '966' : '20';
     _phone.load(s?.phone ?? '', fallback);
     _parentPhone.load(s?.parentPhone ?? '', fallback);
+    final fp = d.familyPrices[s?.family.trim() ?? ''];
+    if (fp != null) _familyPrice.text = _plain(fp);
     // Open the extra options when this student already uses some of them.
     _more =
         s != null &&
@@ -239,6 +242,25 @@ class _StudentFormState extends State<StudentForm> {
                 options: families,
                 hint: 'اكتب نفس الاسم لكل الإخوات، مثال: محمود',
               ),
+              ValueListenableBuilder(
+                valueListenable: _family,
+                builder: (_, v, _) => v.text.trim().isEmpty
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: TextField(
+                          controller: _familyPrice,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: InputDecoration(
+                            labelText: 'سعر الحصة للإخوات مع بعض (اختياري)',
+                            hintText: 'مثلًا ٢٠٠ للتلاتة',
+                            helperText: 'لو كتبته، الإخوات يبقى ليهم حساب واحد ودفع واحد',
+                            helperMaxLines: 2,
+                            suffixText: currency,
+                          ),
+                        ),
+                      ),
+              ),
               const SizedBox(height: 12),
               Panel(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -328,6 +350,15 @@ class _StudentFormState extends State<StudentForm> {
       ..family = _family.text.trim()
       ..notes = _notes.text.trim()
       ..joinedAt = dateOnly(_joined);
+    final fam = s.family;
+    if (fam.isNotEmpty) {
+      final fp = parseArNum(_familyPrice.text);
+      if (fp != null && fp > 0) {
+        store.data.familyPrices[fam] = fp;
+      } else {
+        store.data.familyPrices.remove(fam);
+      }
+    }
     s.priceOverrides.clear();
     s.hoursOverrides.clear();
     for (final gid in _groups) {

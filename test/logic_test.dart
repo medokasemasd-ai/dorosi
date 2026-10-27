@@ -437,4 +437,49 @@ void main() {
     expect(joinPhone('966', '0501234567'), '+966501234567');
     expect(joinPhone('20', ''), '');
   });
+
+  test('siblings with a family price share one account and pay it once per lesson', () {
+    Student kid(String id) => Student(id: id, name: id, family: 'محمود', joinedAt: DateTime(2026, 10, 1));
+    final a = kid('a'), b = kid('b'), c = kid('c'), other = kid('o')..family = '';
+    final d = AppData(
+      students: [a, b, c, other],
+      groups: [
+        _group(
+          'shared',
+          PayType.perLesson,
+          100,
+          slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 17 * 60, durationMin: 180)],
+          students: ['a', 'b', 'c', 'o'],
+        ),
+        _group(
+          'alone',
+          PayType.perLesson,
+          50,
+          slots: [WeeklySlot(weekday: DateTime.monday, startMin: 17 * 60, durationMin: 60)],
+          students: ['a'],
+        ),
+      ],
+      familyPrices: {'محمود': 200},
+    );
+    final now = DateTime(2026, 10, 13, 12); // Saturdays 3 and 10, Monday 5 and 12
+    d.absences.add(absenceKey(d.lessonsOn(DateTime(2026, 10, 10)).first, 'b'));
+    final acc = d.accountFor(b, now);
+    expect(acc.family, 'محمود');
+    expect(acc.label, 'عيلة محمود');
+    expect(acc.members.map((m) => m.id), ['b', 'a', 'c']);
+    // Two shared Saturdays at 200 each, plus a's two lessons alone at 50.
+    expect(acc.due, 2 * 200 + 2 * 50);
+    expect(acc.attended, 1); // b missed the 10th
+    d.payments.add(Payment(id: 'p', studentId: 'c', month: '2026-10', amount: 450));
+    expect(d.accountFor(a, now).remaining, 50);
+    expect(d.accountFor(b, now).remaining, 50);
+    // Without the family price each child pays their own hours as before.
+    d.familyPrices.clear();
+    expect(d.accountFor(b, now).family, isNull);
+    expect(d.accountFor(other, now).due, 2 * 300);
+    final reloaded = AppData.fromJson(
+      jsonDecode(jsonEncode((d..familyPrices['محمود'] = 200).toJson())) as Map<String, dynamic>,
+    );
+    expect(reloaded.familyPrices, {'محمود': 200.0});
+  });
 }
