@@ -158,7 +158,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
                     child: _TableRow(
                       name: r.bill.label,
                       note: _note(r.bill),
-                      due: arMoney(r.bill.paid),
+                      due: arMoney(r.bill.currentPaid),
                       paid: _units(r.bill.lessonsUnpaid),
                       left: arMoney(r.bill.remaining),
                       leftColor: r.bill.remaining > 0 ? AppColors.unpaid : AppColors.paid,
@@ -169,7 +169,7 @@ class _PaymentsPageState extends State<PaymentsPage> {
                   _TableRow(
                     header: true,
                     name: 'الإجمالي',
-                    due: arMoney(sum(rows, (b) => b.paid)),
+                    due: arMoney(sum(rows, (b) => b.currentPaid)),
                     paid: _units(sum(rows, (b) => b.lessonsUnpaid)),
                     left: arMoney(sum(rows, (b) => b.remaining)),
                     leftColor: AppColors.unpaid,

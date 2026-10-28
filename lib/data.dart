@@ -255,8 +255,7 @@ extension Accounts on AppData {
     final charges = <Charge>[];
     final monthsCharged = <String>{};
     final today = dateOnly(now);
-    var attended = 0;
-    var hours = 0.0;
+    final taken = <(DateTime, double)>[];
     var start = dateOnly(s.joinedAt);
     for (final m in members) {
       if (m.joinedAt.isBefore(start)) start = dateOnly(m.joinedAt);
@@ -272,10 +271,7 @@ extension Accounts on AppData {
         if (inClass.isEmpty) continue;
         final month = monthKey(d);
         bool took(Student m) => !l.start.isAfter(now) && !isAbsent(l, m.id);
-        if (inClass.contains(s) && took(s)) {
-          attended++;
-          hours += studentHours(s, l);
-        }
+        if (inClass.contains(s) && took(s)) taken.add((l.start, studentHours(s, l)));
         if (g.payType == PayType.monthly) {
           // A monthly class is one charge for the month, from its first lesson.
           for (final m in inClass) {
@@ -298,14 +294,32 @@ extension Accounts on AppData {
       }
     }
     final ids = {for (final m in members) m.id};
-    final paid = payments.where((p) => ids.contains(p.studentId)).fold<double>(0, (a, p) => a + p.amount);
+    final own = payments.where((p) => ids.contains(p.studentId)).toList()..sort((a, b) => a.paidAt.compareTo(b.paidAt));
+    final paid = own.fold<double>(0, (a, p) => a + p.amount);
     var left = paid;
     for (final c in charges) {
       final take = left < c.amount ? left : c.amount;
       c.paid = take < 0 ? 0 : take;
       left -= c.paid;
     }
-    return Account(charges, paid, attended: attended, hours: hours, family: family, members: members);
+    // The last payment that cleared everything owed up to then: lessons are counted again after it.
+    DateTime? since;
+    var sum = 0.0;
+    for (final p in own) {
+      sum += p.amount;
+      final owed = charges.where((c) => !c.at.isAfter(p.paidAt)).fold<double>(0, (a, c) => a + c.amount);
+      if (sum >= owed - 0.001) since = p.paidAt;
+    }
+    final counted = since == null ? taken : taken.where((t) => t.$1.isAfter(since!));
+    return Account(
+      charges,
+      paid,
+      attended: counted.length,
+      hours: counted.fold<double>(0, (a, t) => a + t.$2),
+      since: since,
+      family: family,
+      members: members,
+    );
   }
 }
 
@@ -324,6 +338,9 @@ class Charge {
   /// Hours charged for a lesson.
   final double hours;
 
+  /// When it became owed: the lesson's start, or the day of the month's first lesson.
+  DateTime get at => lesson?.start ?? date;
+
   /// How much of it the payments cover.
   double paid = 0;
 
@@ -331,7 +348,24 @@ class Charge {
 }
 
 class Account {
-  Account(this.charges, this.paid, {this.attended = 0, this.hours = 0, this.family, this.members = const []});
+  Account(
+    this.charges,
+    this.paid, {
+    this.attended = 0,
+    this.hours = 0,
+    this.since,
+    this.family,
+    this.members = const [],
+  });
+
+  /// When everything owed was last paid; lessons are counted after it. Null before any such payment.
+  final DateTime? since;
+
+  /// Charges since everything was last paid.
+  Iterable<Charge> get current => since == null ? charges : charges.where((c) => c.at.isAfter(since!));
+
+  double get currentDue => current.fold<double>(0, (a, c) => a + c.amount);
+  double get currentPaid => current.fold<double>(0, (a, c) => a + c.paid);
 
   final List<Charge> charges;
   final double paid;
@@ -343,7 +377,7 @@ class Account {
   /// Who the account is for: the family, or the student.
   String get label => family == null ? members.first.name : 'عيلة $family';
 
-  /// Lessons attended in all classes, monthly ones included, and their hours.
+  /// Lessons attended since [since] in all classes, monthly ones included, and their hours.
   final int attended;
   final double hours;
 
@@ -353,7 +387,7 @@ class Account {
   /// Paid beyond what is owed so far.
   double get credit => paid - due > 0 ? paid - due : 0;
 
-  Iterable<Charge> get lessons => charges.where((c) => c.lesson != null);
+  Iterable<Charge> get lessons => current.where((c) => c.lesson != null);
   double get lessonsTaken => attended.toDouble();
 
   /// Per-lesson charges only: each lesson counts once, whatever its length.

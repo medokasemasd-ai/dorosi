@@ -76,6 +76,14 @@ class _StudentPageState extends State<StudentPage> {
                   ),
                   const SizedBox(height: 10),
                 ],
+                if (account.since != null) ...[
+                  Text(
+                    'الحصص بتتعد من بعد ${fmtShortDate(account.since!)} ${arNum(account.since!.year)}، '
+                    'آخر مرة خلّص فيها كل اللي عليه.',
+                    style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.5),
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 Row(
                   children: [
                     Expanded(
@@ -97,8 +105,8 @@ class _StudentPageState extends State<StudentPage> {
                   ],
                 ),
                 const Divider(height: 24),
-                _line('المطلوب كله', fmtMoney(account.due, currency)),
-                _line('المدفوع', fmtMoney(account.paid, currency), color: AppColors.paid),
+                _line('المطلوب', fmtMoney(account.currentDue, currency)),
+                _line('المدفوع', fmtMoney(account.currentPaid, currency), color: AppColors.paid),
                 _line(
                   account.credit > 0 ? 'دافع مقدم' : 'الباقي عليه',
                   fmtMoney(account.credit > 0 ? account.credit : account.remaining, currency),

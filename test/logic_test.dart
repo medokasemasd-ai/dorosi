@@ -357,6 +357,49 @@ void main() {
     expect(d.accountFor(s, DateTime(2026, 10, 2)).due, 0);
   });
 
+  test('lessons are counted again after everything owed is paid', () {
+    // October 2026: Sat 3, 10, 17, 24, one hour at 100.
+    final g = _group(
+      'g',
+      PayType.perLesson,
+      100,
+      slots: [WeeklySlot(weekday: DateTime.saturday, startMin: 17 * 60, durationMin: 60)],
+      students: ['s1'],
+    );
+    final d = AppData(students: [s], groups: [g]);
+    final now = DateTime(2026, 10, 24, 23);
+    // Paid the first two on the 12th: counting starts after that.
+    d.payments.add(Payment(id: 'p', studentId: 's1', month: '2026-10', amount: 200, paidAt: DateTime(2026, 10, 12)));
+    var a = d.accountFor(s, now);
+    expect(a.since, DateTime(2026, 10, 12));
+    expect(a.lessonsTaken, 2);
+    expect(a.lessonsUnpaid, 2);
+    expect(a.currentDue, 200);
+    expect(a.currentPaid, 0);
+    // Paying part of it does not start a new count.
+    d.payments.add(
+      Payment(id: 'q', studentId: 's1', month: '2026-10', amount: 100, paidAt: DateTime(2026, 10, 24, 20)),
+    );
+    a = d.accountFor(s, now);
+    expect(a.since, DateTime(2026, 10, 12));
+    expect(a.lessonsPaid, 1);
+    // Paying it all does, even mid-month.
+    d.payments.add(
+      Payment(id: 'r', studentId: 's1', month: '2026-10', amount: 100, paidAt: DateTime(2026, 10, 24, 21)),
+    );
+    a = d.accountFor(s, now);
+    expect(a.since, DateTime(2026, 10, 24, 21));
+    expect(a.lessonsTaken, 0);
+    expect(a.currentDue, 0);
+    expect(a.remaining, 0);
+    // Paid in full on the morning of a lesson day: that evening's lesson starts the new count.
+    d.payments.clear();
+    d.payments.add(Payment(id: 'p', studentId: 's1', month: '2026-10', amount: 300, paidAt: DateTime(2026, 10, 24, 9)));
+    a = d.accountFor(s, now);
+    expect(a.lessonsTaken, 1);
+    expect(a.lessonsUnpaid, 1);
+  });
+
   test('a monthly class still counts the lessons attended', () {
     final g = _group(
       'g',
